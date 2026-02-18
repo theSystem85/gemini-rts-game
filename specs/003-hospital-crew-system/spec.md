@@ -5,7 +5,7 @@
 **Status**: Implemented (Retrospective Documentation)  
 **Input**: User description: "Hospital building with 4-person tank crew system (driver, gunner, loader, commander), crew casualties, crew restoration, and ambulance unit for field recovery"
 
-**Note**: This is a retrospective specification documenting an already-implemented feature for the CodeAndConquer RTS game.
+**Note**: This is a retrospective specification documenting an already-implemented feature for the Code for Battle RTS game.
 
 ## User Scenarios & Testing
 

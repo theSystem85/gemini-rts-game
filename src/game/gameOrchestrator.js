@@ -18,7 +18,7 @@ import {
   setMapDimensions
 } from '../config.js'
 import { initSettingsModal, openSettingsModal } from '../ui/settingsModal.js'
-import { initSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
+import { initSidebarMultiplayer, refreshSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
 import { initAiPartySync } from '../network/aiPartySync.js'
 import { setProductionControllerRef } from '../network/gameCommandSync.js'
 import { initFactories } from '../factories.js'
@@ -50,6 +50,8 @@ import { addMoneyIndicator } from '../ui/moneyBar.js'
 import { closeMobileSidebarModal, isMobileSidebarModalVisible } from '../ui/mobileLayout.js'
 import { resetLlmUsage } from '../ai/llmUsage.js'
 import { runMeasuredTask, scheduleAfterNextPaint, scheduleIdleTask } from '../startupScheduler.js'
+import { UnitRenderer } from '../rendering/unitRenderer.js'
+import { preloadRocketTankImage } from '../rendering/rocketTankImageRenderer.js'
 
 export const MAP_SEED_STORAGE_KEY = 'rts-map-seed'
 const PLAYER_COUNT_STORAGE_KEY = 'rts-player-count'
@@ -57,6 +59,8 @@ export const MAP_WIDTH_TILES_STORAGE_KEY = 'rts-map-width-tiles'
 export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 const DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY = 'rts-desktop-edge-autoscroll-enabled'
+const SELECTION_HUD_MODE_STORAGE_KEY = 'rts-selection-hud-mode'
+const SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY = 'rts-selection-hud-bar-thickness'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -66,11 +70,75 @@ function sanitizeMapDimension(value, fallback) {
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
 }
 
+function sanitizeSelectionHudBarThickness(value, fallback = 4) {
+  const parsed = parseInt(value, 10)
+  if (Number.isFinite(parsed)) {
+    return Math.max(1, Math.min(8, parsed))
+  }
+
+  const safeFallback = Number.isFinite(fallback) ? Math.floor(fallback) : 4
+  return Math.max(1, Math.min(8, safeFallback))
+}
+
+function parseStartupMapOverrides() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const params = new URLSearchParams(window.location.search || '')
+  const rawSeed = params.get('seed')
+  const rawSize = params.get('size') || params.get('mapSize')
+  const rawWidth = params.get('width') || params.get('mapWidth')
+  const rawHeight = params.get('height') || params.get('mapHeight')
+  const rawPlayers = params.get('players') || params.get('playerCount')
+
+  const hasAnyOverride = rawSeed !== null || rawSize !== null || rawWidth !== null || rawHeight !== null || rawPlayers !== null
+  if (!hasAnyOverride) {
+    return null
+  }
+
+  let width = null
+  let height = null
+  if (rawSize !== null) {
+    const size = sanitizeMapDimension(rawSize, DEFAULT_MAP_TILES_X)
+    width = size
+    height = size
+  }
+
+  if (rawWidth !== null) {
+    width = sanitizeMapDimension(rawWidth, width ?? DEFAULT_MAP_TILES_X)
+  }
+
+  if (rawHeight !== null) {
+    height = sanitizeMapDimension(rawHeight, height ?? DEFAULT_MAP_TILES_Y)
+  }
+
+  let playerCount = null
+  if (rawPlayers !== null) {
+    const parsedPlayers = parseInt(rawPlayers, 10)
+    if (Number.isFinite(parsedPlayers) && parsedPlayers >= 2 && parsedPlayers <= 4) {
+      playerCount = parsedPlayers
+    }
+  }
+
+  return {
+    seed: rawSeed !== null ? resolveMapSeed(rawSeed) : null,
+    width,
+    height,
+    playerCount
+  }
+}
+
+const startupMapOverrides = parseStartupMapOverrides()
+
 function loadPersistedSettings() {
+  const mapOverrides = startupMapOverrides
   try {
     const seedInput = document.getElementById('mapSeed')
     const storedSeed = localStorage.getItem(MAP_SEED_STORAGE_KEY)
-    if (seedInput && storedSeed !== null) {
+    if (seedInput && mapOverrides?.seed) {
+      seedInput.value = mapOverrides.seed
+    } else if (seedInput && storedSeed !== null) {
       seedInput.value = storedSeed
     }
   } catch (e) {
@@ -107,26 +175,45 @@ function loadPersistedSettings() {
     heightInput.value = heightTiles
   }
 
+  if (mapOverrides?.width !== null && mapOverrides?.width !== undefined) {
+    widthTiles = mapOverrides.width
+    if (widthInput) {
+      widthInput.value = widthTiles
+    }
+  }
+
+  if (mapOverrides?.height !== null && mapOverrides?.height !== undefined) {
+    heightTiles = mapOverrides.height
+    if (heightInput) {
+      heightInput.value = heightTiles
+    }
+  }
+
   const { width, height } = setMapDimensions(widthTiles, heightTiles)
   gameState.mapTilesX = width
   gameState.mapTilesY = height
 
-  try {
-    localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
-  } catch (e) {
-    window.logger.warn('Failed to save map width to localStorage:', e)
-  }
+  if (!mapOverrides?.width && !mapOverrides?.height) {
+    try {
+      localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
+    } catch (e) {
+      window.logger.warn('Failed to save map width to localStorage:', e)
+    }
 
-  try {
-    localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
-  } catch (e) {
-    window.logger.warn('Failed to save map height to localStorage:', e)
+    try {
+      localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
+    } catch (e) {
+      window.logger.warn('Failed to save map height to localStorage:', e)
+    }
   }
 
   try {
     const playerInput = document.getElementById('playerCount')
     const storedCount = localStorage.getItem(PLAYER_COUNT_STORAGE_KEY)
-    if (playerInput && storedCount !== null) {
+    if (playerInput && mapOverrides?.playerCount) {
+      playerInput.value = mapOverrides.playerCount
+      gameState.playerCount = mapOverrides.playerCount
+    } else if (playerInput && storedCount !== null) {
       const parsed = parseInt(storedCount)
       if (!isNaN(parsed) && parsed >= 2 && parsed <= 4) {
         playerInput.value = parsed
@@ -155,6 +242,24 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     window.logger.warn('Failed to load desktop edge auto-scroll setting from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudMode = localStorage.getItem(SELECTION_HUD_MODE_STORAGE_KEY)
+    if (storedSelectionHudMode === 'legacy' || storedSelectionHudMode === 'modern' || storedSelectionHudMode === 'modern-no-border' || storedSelectionHudMode === 'modern-donut') {
+      gameState.selectionHudMode = storedSelectionHudMode
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD mode from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudBarThickness = localStorage.getItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY)
+    if (storedSelectionHudBarThickness !== null) {
+      gameState.selectionHudBarThickness = sanitizeSelectionHudBarThickness(storedSelectionHudBarThickness, gameState.selectionHudBarThickness)
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD bar thickness from localStorage:', e)
   }
 }
 
@@ -218,15 +323,28 @@ class Game {
     deactivateMapEditMode()
     gameState.gameStarted = true
 
-    // Check for seed in URL params first, then fall back to input field
-    const urlParams = new URLSearchParams(window.location.search)
-    const urlSeed = urlParams.get('seed')
+    const mapOverrides = startupMapOverrides
     const seedInput = document.getElementById('mapSeed')
-    const seed = resolveMapSeed(urlSeed || (seedInput ? seedInput.value : '1'))
+    const seed = resolveMapSeed(mapOverrides?.seed || (seedInput ? seedInput.value : gameState.mapSeed || '1'))
 
-    // Update input field to reflect the seed being used
-    if (seedInput && urlSeed) {
+    if (seedInput && mapOverrides?.seed) {
       seedInput.value = seed
+    }
+
+    if (mapOverrides?.width || mapOverrides?.height) {
+      const resolvedWidth = mapOverrides?.width || gameState.mapTilesX || MAP_TILES_X
+      const resolvedHeight = mapOverrides?.height || gameState.mapTilesY || MAP_TILES_Y
+      setMapDimensions(resolvedWidth, resolvedHeight)
+      gameState.mapTilesX = resolvedWidth
+      gameState.mapTilesY = resolvedHeight
+    }
+
+    if (mapOverrides?.playerCount) {
+      gameState.playerCount = mapOverrides.playerCount
+      const playerCountInput = document.getElementById('playerCount')
+      if (playerCountInput) {
+        playerCountInput.value = mapOverrides.playerCount
+      }
     }
 
     gameState.mapSeed = seed
@@ -396,6 +514,7 @@ class Game {
           } catch (err) {
             window.logger.warn('Failed to save player count to localStorage:', err)
           }
+          refreshSidebarMultiplayer()
         } else {
           e.target.value = gameState.playerCount || 2
         }
@@ -480,9 +599,70 @@ class Game {
     const oreCheckbox = document.getElementById('oreSpreadCheckbox')
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const edgeAutoscrollCheckbox = document.getElementById('desktopEdgeAutoscrollToggle')
+    const selectionHudModeSelect = document.getElementById('selectionHudModeSelect')
+    const selectionHudBarThicknessInput = document.getElementById('selectionHudBarThicknessInput')
+    const selectionHudPreviewCanvas = document.getElementById('selectionHudPreviewCanvas')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
+    const previewRenderer = new UnitRenderer()
+
+    const renderSelectionHudPreview = () => {
+      if (!selectionHudPreviewCanvas) return
+
+      const ctx = selectionHudPreviewCanvas.getContext('2d')
+      if (!ctx) return
+
+      const mode = selectionHudModeSelect?.value || gameState.selectionHudMode || 'modern'
+      const barThickness = sanitizeSelectionHudBarThickness(
+        selectionHudBarThicknessInput?.value,
+        gameState.selectionHudBarThickness
+      )
+      gameState.selectionHudMode = mode
+      gameState.selectionHudBarThickness = barThickness
+
+      const canvasWidth = selectionHudPreviewCanvas.width
+      const canvasHeight = selectionHudPreviewCanvas.height
+      const centerX = Math.floor(canvasWidth / 2)
+      const centerY = Math.floor((canvasHeight / 2) + 8)
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+      ctx.fillStyle = '#0F131A'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      const previewUnit = {
+        id: 'settings-hud-preview-rocket',
+        owner: 'player',
+        type: 'rocketTank',
+        selected: true,
+        x: centerX - (TILE_SIZE / 2),
+        y: centerY - (TILE_SIZE / 2),
+        direction: -Math.PI / 3,
+        health: 70,
+        maxHealth: 100,
+        gas: 60,
+        maxGas: 100,
+        ammunition: 7,
+        maxAmmunition: 10,
+        level: 2,
+        experience: 1200,
+        baseCost: 2000,
+        crew: {
+          driver: true,
+          gunner: true,
+          loader: true,
+          commander: true
+        }
+      }
+
+      const previewScrollOffset = { x: 0, y: 0 }
+      previewRenderer.renderUnitBase(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
+      previewRenderer.renderUnitOverlay(ctx, previewUnit, previewScrollOffset, canvasWidth, canvasHeight)
+    }
+
+    preloadRocketTankImage(() => {
+      renderSelectionHudPreview()
+    })
 
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
       mapSettingsToggle.addEventListener('click', () => {
@@ -535,6 +715,16 @@ class Game {
       edgeAutoscrollCheckbox.checked = DESKTOP_EDGE_AUTOSCROLL_ENABLED
     }
 
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.value = gameState.selectionHudMode || 'modern'
+    }
+
+    if (selectionHudBarThicknessInput) {
+      selectionHudBarThicknessInput.value = sanitizeSelectionHudBarThickness(gameState.selectionHudBarThickness, 4)
+    }
+
+    renderSelectionHudPreview()
+
     const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
     if (showEnemyResourcesCheckbox) {
       showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
@@ -576,6 +766,42 @@ class Game {
           window.logger.warn('Failed to save desktop edge auto-scroll setting to localStorage:', err)
         }
       })
+    }
+
+    if (selectionHudModeSelect) {
+      selectionHudModeSelect.addEventListener('change', (e) => {
+        const nextMode = e.target.value
+        if (nextMode !== 'legacy' && nextMode !== 'modern' && nextMode !== 'modern-no-border' && nextMode !== 'modern-donut') {
+          return
+        }
+        gameState.selectionHudMode = nextMode
+        try {
+          localStorage.setItem(SELECTION_HUD_MODE_STORAGE_KEY, nextMode)
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD mode to localStorage:', err)
+        }
+        renderSelectionHudPreview()
+      })
+    }
+
+    if (selectionHudBarThicknessInput) {
+      const applyHudBarThickness = () => {
+        const nextThickness = sanitizeSelectionHudBarThickness(
+          selectionHudBarThicknessInput.value,
+          gameState.selectionHudBarThickness
+        )
+        selectionHudBarThicknessInput.value = nextThickness
+        gameState.selectionHudBarThickness = nextThickness
+        try {
+          localStorage.setItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY, nextThickness.toString())
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD bar thickness to localStorage:', err)
+        }
+        renderSelectionHudPreview()
+      }
+
+      selectionHudBarThicknessInput.addEventListener('input', applyHudBarThickness)
+      selectionHudBarThicknessInput.addEventListener('change', applyHudBarThickness)
     }
 
     if (cheatMenuBtn) {

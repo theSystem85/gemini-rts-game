@@ -1,4 +1,4 @@
-const CACHE_NAME = 'codeandconquer-cache-v1'
+const CACHE_NAME = 'code-for-battle-cache-v1'
 const PRECACHE_URLS = [
   '/',
   '/index.html',

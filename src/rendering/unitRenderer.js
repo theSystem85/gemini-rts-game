@@ -185,47 +185,180 @@ export class UnitRenderer {
   renderSelection(ctx, unit, centerX, centerY) {
     // Draw selection corner indicators if unit is selected (like buildings)
     if (unit.selected) {
+      if (this.getSelectionHudMode() === 'modern-no-border') {
+        return
+      }
+
+      if (this.isDonutSelectionHud()) {
+        return
+      }
+
+      if (this.getSelectionHudMode() === 'legacy') {
+        ctx.strokeStyle = '#FF0'
+        ctx.lineWidth = 1
+
+        const cornerSize = 8
+        const offset = 2
+        const halfTile = TILE_SIZE / 2
+
+        const left = centerX - halfTile - offset
+        const right = centerX + halfTile + offset
+        const top = centerY - halfTile - offset
+        const bottom = centerY + halfTile + offset
+
+        ctx.beginPath()
+        ctx.moveTo(left, top + cornerSize)
+        ctx.lineTo(left, top)
+        ctx.lineTo(left + cornerSize, top)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(right - cornerSize, top)
+        ctx.lineTo(right, top)
+        ctx.lineTo(right, top + cornerSize)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(left, bottom - cornerSize)
+        ctx.lineTo(left, bottom)
+        ctx.lineTo(left + cornerSize, bottom)
+        ctx.stroke()
+
+        ctx.beginPath()
+        ctx.moveTo(right - cornerSize, bottom)
+        ctx.lineTo(right, bottom)
+        ctx.lineTo(right, bottom - cornerSize)
+        ctx.stroke()
+        return
+      }
+
       ctx.strokeStyle = '#FF0'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 1
 
-      const cornerSize = 8 // Size of corner brackets (smaller than buildings)
-      const offset = 2 // Offset from unit edge
-      const halfTile = TILE_SIZE / 2
+      const hudBounds = this.getSelectedHudBounds(centerX, centerY)
 
-      // Calculate unit bounds
-      const left = centerX - halfTile - offset
-      const right = centerX + halfTile + offset
-      const top = centerY - halfTile - offset
-      const bottom = centerY + halfTile + offset
-
-      // Top-left corner
       ctx.beginPath()
-      ctx.moveTo(left, top + cornerSize)
-      ctx.lineTo(left, top)
-      ctx.lineTo(left + cornerSize, top)
-      ctx.stroke()
-
-      // Top-right corner
-      ctx.beginPath()
-      ctx.moveTo(right - cornerSize, top)
-      ctx.lineTo(right, top)
-      ctx.lineTo(right, top + cornerSize)
-      ctx.stroke()
-
-      // Bottom-left corner
-      ctx.beginPath()
-      ctx.moveTo(left, bottom - cornerSize)
-      ctx.lineTo(left, bottom)
-      ctx.lineTo(left + cornerSize, bottom)
-      ctx.stroke()
-
-      // Bottom-right corner
-      ctx.beginPath()
-      ctx.moveTo(right - cornerSize, bottom)
-      ctx.lineTo(right, bottom)
-      ctx.lineTo(right, bottom - cornerSize)
+      ctx.rect(
+        hudBounds.left,
+        hudBounds.top,
+        hudBounds.right - hudBounds.left,
+        hudBounds.bottom - hudBounds.top
+      )
       ctx.stroke()
     }
+  }
+
+  getSelectedHudBounds(centerX, centerY) {
+    const hudPadding = 6
+    const halfHudSize = (TILE_SIZE / 2) + hudPadding
+
+    return {
+      left: centerX - halfHudSize,
+      right: centerX + halfHudSize,
+      top: centerY - halfHudSize,
+      bottom: centerY + halfHudSize,
+      width: halfHudSize * 2,
+      height: halfHudSize * 2
+    }
+  }
+
+  drawHudEdgeBar(ctx, hudBounds, edge, ratio, color) {
+    const clampedRatio = Math.max(0, Math.min(1, ratio))
+    const barThickness = this.getSelectionHudBarThickness()
+    const barSpan = TILE_SIZE * 0.75
+
+    if (this.isDonutSelectionHud()) {
+      const donutBarThickness = Math.max(1, barThickness - 2)
+      const centerX = (hudBounds.left + hudBounds.right) / 2
+      const centerY = (hudBounds.top + hudBounds.bottom) / 2
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const crewSize = 5
+      const crewGap = 3
+      const crewHalfSpanAngle = ((crewSize / 2) + crewGap) / donutRadius
+
+      const arcRanges = {
+        left: [Math.PI + crewHalfSpanAngle, (Math.PI * 1.5) - crewHalfSpanAngle],
+        top: [(Math.PI * 1.5) + crewHalfSpanAngle, (Math.PI * 2) - crewHalfSpanAngle],
+        right: [crewHalfSpanAngle, (Math.PI / 2) - crewHalfSpanAngle],
+        bottom: [(Math.PI / 2) + crewHalfSpanAngle, Math.PI - crewHalfSpanAngle]
+      }
+
+      const selectedArc = arcRanges[edge]
+      if (!selectedArc) return
+
+      const [startAngle, endAngle] = selectedArc
+      const sweep = endAngle - startAngle
+
+      ctx.save()
+      ctx.lineCap = 'round'
+      ctx.lineWidth = donutBarThickness
+      ctx.strokeStyle = '#3A3A3A'
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, donutRadius, startAngle, endAngle)
+      ctx.stroke()
+
+      if (clampedRatio > 0) {
+        ctx.strokeStyle = color
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, donutRadius, startAngle, startAngle + (sweep * clampedRatio))
+        ctx.stroke()
+      }
+
+      ctx.restore()
+      return
+    }
+
+    ctx.fillStyle = '#3A3A3A'
+
+    if (edge === 'top' || edge === 'bottom') {
+      const y = edge === 'top'
+        ? hudBounds.top - (barThickness / 2)
+        : hudBounds.bottom - (barThickness / 2)
+      const barX = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
+      ctx.fillRect(barX, y, barSpan, barThickness)
+
+      if (clampedRatio > 0) {
+        ctx.fillStyle = color
+        ctx.fillRect(barX, y, barSpan * clampedRatio, barThickness)
+      }
+      return
+    }
+
+    const x = edge === 'left'
+      ? hudBounds.left - (barThickness / 2)
+      : hudBounds.right - (barThickness / 2)
+    const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
+    ctx.fillRect(x, barY, barThickness, barSpan)
+
+    if (clampedRatio > 0) {
+      const fillHeight = barSpan * clampedRatio
+      ctx.fillStyle = color
+      ctx.fillRect(x, barY + barSpan - fillHeight, barThickness, fillHeight)
+    }
+  }
+
+  getSelectionHudMode() {
+    return gameState.selectionHudMode || 'modern'
+  }
+
+  getSelectionHudBarThickness() {
+    const parsed = parseInt(gameState.selectionHudBarThickness, 10)
+    if (!Number.isFinite(parsed)) {
+      return 4
+    }
+    return Math.max(1, Math.min(8, parsed))
+  }
+
+  isLegacySelectionHud() {
+    return this.getSelectionHudMode() === 'legacy'
+  }
+
+  isModernCornerCrewHud() {
+    return this.getSelectionHudMode() === 'modern-no-border'
+  }
+
+  isDonutSelectionHud() {
+    return this.getSelectionHudMode() === 'modern-donut'
   }
 
   renderUtilityServiceRange(ctx, unit, centerX, centerY) {
@@ -283,12 +416,29 @@ export class UnitRenderer {
 
     // Draw health bar with party colors for owner distinction
     const unitHealthRatio = unit.health / unit.maxHealth
+
+    if (unit.selected && !this.isLegacySelectionHud()) {
+      const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+      const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+      const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+
+      const healthColor = unitHealthRatio < 0.25
+        ? '#FF0000'
+        : (PARTY_COLORS[unit.owner] || PARTY_COLORS.player)
+
+      this.drawHudEdgeBar(ctx, hudBounds, 'top', unitHealthRatio, healthColor)
+      return
+    }
+
     const healthBarWidth = TILE_SIZE * 0.8
     const healthBarHeight = 4
     const healthBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - healthBarWidth / 2
     const healthBarY = unit.y - 10 - scrollOffset.y - altitudeLift
-    ctx.strokeStyle = '#000'
-    ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+
+    if (this.isLegacySelectionHud()) {
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight)
+    }
 
     // Use red color for critically damaged units (below 25% health when speed penalty kicks in)
     // Otherwise use party colors for health bar fill
@@ -359,11 +509,21 @@ export class UnitRenderer {
     }
 
     if (shouldShowBar) {
+      if (unit.selected && !this.isLegacySelectionHud()) {
+        const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+        const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+        const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+        const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+
+        this.drawHudEdgeBar(ctx, hudBounds, 'bottom', progress, barColor)
+        return
+      }
+
       // Apply altitude adjustment for Apache helicopters to align with health bar
       const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
 
       const progressBarWidth = TILE_SIZE * 0.8
-      const progressBarHeight = 3
+      const progressBarHeight = unit.selected ? this.getSelectionHudBarThickness() : 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
       const progressBarY = unit.y - 5 - scrollOffset.y - altitudeLift
 
@@ -375,9 +535,10 @@ export class UnitRenderer {
       ctx.fillStyle = barColor
       ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight)
 
-      // Border
-      ctx.strokeStyle = '#000'
-      ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+      if (this.isLegacySelectionHud()) {
+        ctx.strokeStyle = '#000'
+        ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight)
+      }
     }
   }
 
@@ -391,28 +552,34 @@ export class UnitRenderer {
 
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
-    const halfTile = TILE_SIZE / 2
-    const cornerSize = 8
-    const offset = 2
+    if (this.isLegacySelectionHud()) {
+      const halfTile = TILE_SIZE / 2
+      const cornerSize = 8
+      const offset = 2
 
-    const right = centerX + halfTile + offset
-    const top = centerY - halfTile - offset
-    const bottom = centerY + halfTile + offset
+      const right = centerX + halfTile + offset
+      const top = centerY - halfTile - offset
+      const bottom = centerY + halfTile + offset
 
-    const barWidth = 3
-    const barHeight = bottom - top - cornerSize * 2
-    const barX = right - barWidth - 1
-    const barTop = top + cornerSize
+      const barWidth = this.getSelectionHudBarThickness()
+      const barHeight = bottom - top - cornerSize * 2
+      const barX = right - barWidth - 1
+      const barTop = top + cornerSize
 
-    ctx.fillStyle = '#333'
-    ctx.fillRect(barX, barTop, barWidth, barHeight)
+      ctx.fillStyle = '#333'
+      ctx.fillRect(barX, barTop, barWidth, barHeight)
 
-    const fillHeight = barHeight * ratio
-    ctx.fillStyle = '#4A90E2'
-    ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+      const fillHeight = barHeight * ratio
+      ctx.fillStyle = '#4A90E2'
+      ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
 
-    ctx.strokeStyle = '#000'
-    ctx.strokeRect(barX, barTop, barWidth, barHeight)
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(barX, barTop, barWidth, barHeight)
+      return
+    }
+
+    const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+    this.drawHudEdgeBar(ctx, hudBounds, 'right', ratio, '#4A90E2')
   }
 
   renderAmmunitionBar(ctx, unit, scrollOffset) {
@@ -472,42 +639,62 @@ export class UnitRenderer {
 
     // Apply altitude adjustment for Apache helicopters to align with selection
     const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
-
     const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
     const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
-    const halfTile = TILE_SIZE / 2
-    const cornerSize = 8
-    const offset = 2
 
-    const left = centerX - halfTile - offset
-    const top = centerY - halfTile - offset
-    const bottom = centerY + halfTile + offset
+    if (this.isLegacySelectionHud()) {
+      const halfTile = TILE_SIZE / 2
+      const cornerSize = 8
+      const offset = 2
 
-    const barWidth = 3
-    const barHeight = bottom - top - cornerSize * 2
-    const barX = left + 1
-    const barTop = top + cornerSize
+      const left = centerX - halfTile - offset
+      const top = centerY - halfTile - offset
+      const bottom = centerY + halfTile + offset
 
-    ctx.fillStyle = '#333'
-    ctx.fillRect(barX, barTop, barWidth, barHeight)
+      const barWidth = this.getSelectionHudBarThickness()
+      const barHeight = bottom - top - cornerSize * 2
+      const barX = left + 1
+      const barTop = top + cornerSize
 
-    const fillHeight = barHeight * ratio
-    ctx.fillStyle = barColor
-    ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+      ctx.fillStyle = '#333'
+      ctx.fillRect(barX, barTop, barWidth, barHeight)
+
+      const fillHeight = barHeight * ratio
+      ctx.fillStyle = barColor
+      ctx.fillRect(barX, barTop + barHeight - fillHeight, barWidth, fillHeight)
+
+      if (reloadRatio !== null) {
+        const reloadLineY = barTop + barHeight - (barHeight * reloadRatio)
+        ctx.strokeStyle = '#87CEEB'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(barX, reloadLineY)
+        ctx.lineTo(barX + barWidth, reloadLineY)
+        ctx.stroke()
+      }
+
+      ctx.strokeStyle = '#000'
+      ctx.strokeRect(barX, barTop, barWidth, barHeight)
+      return
+    }
+
+    const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+    this.drawHudEdgeBar(ctx, hudBounds, 'left', ratio, barColor)
 
     // Draw reload indicator overlay for rocket tanks (light blue 1px line)
-    if (reloadRatio !== null) {
-      const reloadLineY = barTop + barHeight - (barHeight * reloadRatio)
+    if (reloadRatio !== null && !this.isDonutSelectionHud()) {
+      const barThickness = this.getSelectionHudBarThickness()
+      const barSpan = TILE_SIZE * 0.75
+      const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
+      const barX = hudBounds.left - (barThickness / 2)
+      const reloadLineY = barY + barSpan - (barSpan * reloadRatio)
       ctx.strokeStyle = '#87CEEB' // Light blue
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(barX, reloadLineY)
-      ctx.lineTo(barX + barWidth, reloadLineY)
+      ctx.lineTo(barX + barThickness, reloadLineY)
       ctx.stroke()
     }
-
-    ctx.strokeStyle = '#000'
-    ctx.strokeRect(barX, barTop, barWidth, barHeight)
   }
 
   renderQueueNumber(_ctx, _unit, _scrollOffset) {
@@ -533,18 +720,129 @@ export class UnitRenderer {
   renderCrewStatus(ctx, unit, scrollOffset) {
     if (!unit.selected || !unit.crew) return
 
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y
+    const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     const size = 5
-    const baseX = unit.x - scrollOffset.x
-    const baseY = unit.y + TILE_SIZE - scrollOffset.y
     const colors = { driver: '#00F', gunner: '#F00', loader: '#FFA500', commander: '#006400' }
     const letters = { driver: 'D', gunner: 'G', loader: 'L', commander: 'C' }
 
-    ctx.save()
-    let idx = 0
-    Object.entries(unit.crew).forEach(([role, alive]) => {
-      if (!alive) return
+    const aliveCrew = Object.entries(unit.crew).filter(([_role, alive]) => alive)
+    if (aliveCrew.length === 0) return
 
-      const x = baseX + idx * (size + 2)
+    if (this.isModernCornerCrewHud()) {
+      const rectHeight = size * 2 * 0.7
+      const centerAnchors = {
+        driver: { cx: hudBounds.left, cy: hudBounds.top },
+        commander: { cx: hudBounds.right, cy: hudBounds.top },
+        gunner: { cx: hudBounds.left, cy: hudBounds.bottom },
+        loader: { cx: hudBounds.right, cy: hudBounds.bottom }
+      }
+
+      const fallbackAnchors = [
+        { cx: hudBounds.left, cy: hudBounds.top },
+        { cx: hudBounds.right, cy: hudBounds.top },
+        { cx: hudBounds.left, cy: hudBounds.bottom },
+        { cx: hudBounds.right, cy: hudBounds.bottom }
+      ]
+
+      ctx.save()
+      aliveCrew.forEach(([role], idx) => {
+        const anchor = centerAnchors[role] || fallbackAnchors[idx % fallbackAnchors.length]
+        const x = anchor.cx - (size / 2)
+        const y = anchor.cy + (rectHeight / 2)
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+        ctx.fillRect(x - 1, y - rectHeight - 1, size + 2, rectHeight + 2)
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+      })
+      ctx.restore()
+      return
+    }
+
+    if (this.isDonutSelectionHud()) {
+      const rectHeight = size * 2 * 0.7
+      const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+      const anchorOffsets = {
+        commander: { x: 0, y: -donutRadius },
+        gunner: { x: donutRadius, y: 0 },
+        loader: { x: 0, y: donutRadius },
+        driver: { x: -donutRadius, y: 0 }
+      }
+
+      const fallbackOffsets = [
+        { x: 0, y: -donutRadius },
+        { x: donutRadius, y: 0 },
+        { x: 0, y: donutRadius },
+        { x: -donutRadius, y: 0 }
+      ]
+
+      ctx.save()
+      aliveCrew.forEach(([role], idx) => {
+        const offset = anchorOffsets[role] || fallbackOffsets[idx % fallbackOffsets.length]
+        const centerPx = centerX + offset.x
+        const centerPy = centerY + offset.y
+        const x = centerPx - (size / 2)
+        const y = centerPy + (rectHeight / 2)
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+        ctx.fillRect(x - 1, y - rectHeight - 1, size + 2, rectHeight + 2)
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+      })
+      ctx.restore()
+      return
+    }
+
+    if (this.isLegacySelectionHud()) {
+      const baseX = unit.x - scrollOffset.x
+      const baseY = unit.y + TILE_SIZE - scrollOffset.y
+
+      ctx.save()
+      let idx = 0
+      aliveCrew.forEach(([role]) => {
+        const x = baseX + idx * (size + 2)
+        const y = baseY
+        const rectHeight = size * 2 * 0.7
+
+        ctx.fillStyle = colors[role]
+        ctx.fillRect(x, y - rectHeight, size, rectHeight)
+
+        ctx.fillStyle = '#FFF'
+        ctx.font = '4px Arial'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
+
+        idx++
+      })
+      ctx.restore()
+      return
+    }
+
+    const baseY = hudBounds.bottom + 8
+    const slotSpacing = size + 2
+    const totalCrewWidth = (aliveCrew.length * size) + ((aliveCrew.length - 1) * 2)
+    const baseX = centerX - (totalCrewWidth / 2)
+
+    ctx.save()
+    aliveCrew.forEach(([role], idx) => {
+      const x = baseX + idx * slotSpacing
       const y = baseY
 
       const rectHeight = size * 2 * 0.7
@@ -557,8 +855,6 @@ export class UnitRenderer {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
-
-      idx++
     })
     ctx.restore()
   }
@@ -743,12 +1039,21 @@ export class UnitRenderer {
 
     initializeUnitLeveling(unit)
 
-    // Position stars above the health bar
+    const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+    const centerX = unit.x + TILE_SIZE / 2 - scrollOffset.x
+    const centerY = unit.y + TILE_SIZE / 2 - scrollOffset.y - altitudeLift
+    const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+
+    // Position stars directly over the health bar with slight overlap
     const starSize = 6
     const starSpacing = 8
     const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
-    const startX = unit.x + TILE_SIZE / 2 - scrollOffset.x - totalWidth / 2
-    const starY = unit.y - 20 - scrollOffset.y // Above health bar
+    const startX = (centerX - totalWidth / 2) + (this.isDonutSelectionHud() ? 2 : 0)
+    const starY = this.isLegacySelectionHud()
+      ? unit.y - 20 - scrollOffset.y
+      : this.isDonutSelectionHud()
+        ? hudBounds.top - 12
+        : hudBounds.top - 3
     ctx.save()
     ctx.fillStyle = '#FFD700' // Gold color for stars
     ctx.strokeStyle = '#FFA500' // Orange outline

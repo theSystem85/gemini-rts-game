@@ -2,7 +2,7 @@
 
 **Generated on:** June 25, 2025  
 **Analysis Date:** 2025-06-25  
-**Project:** CodeAndConquer Clone
+**Project:** Code for Battle Clone
 
 ## File Size Analysis
 

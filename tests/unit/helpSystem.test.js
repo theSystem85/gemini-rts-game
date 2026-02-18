@@ -17,6 +17,7 @@ describe('helpSystem.js', () => {
   beforeEach(() => {
     resetGameState()
     gameState.paused = false
+    gameState.helpDialogOpen = false
     helpSystem = new HelpSystem()
 
     const existingOverlay = document.getElementById('helpOverlay')
@@ -38,41 +39,38 @@ describe('helpSystem.js', () => {
     const helpOverlay = document.getElementById('helpOverlay')
 
     expect(helpOverlay).not.toBeNull()
-    expect(helpOverlay.style.position).toBe('absolute')
-    expect(helpOverlay.style.background).toContain('linear-gradient')
-    expect(helpOverlay.style.zIndex).toBe('1000')
+    expect(helpOverlay.classList.contains('config-modal')).toBe(true)
+    expect(helpOverlay.classList.contains('config-modal--open')).toBe(true)
+    expect(helpOverlay.classList.contains('help-dialog-overlay')).toBe(true)
     expect(helpOverlay.innerHTML).toContain('Game Controls')
     expect(helpOverlay.innerHTML).toContain('Map Editor Controls')
     expect(helpOverlay.innerHTML).toContain('Press I again to close')
     expect(document.body.contains(helpOverlay)).toBe(true)
-    expect(gameState.paused).toBe(true)
+    expect(gameState.helpDialogOpen).toBe(true)
   })
 
-  it('toggles overlay visibility without recreating the element', () => {
+  it('removes the overlay on close and recreates it on re-open', () => {
     helpSystem.showControlsHelp()
-
-    const firstOverlay = document.getElementById('helpOverlay')
-    expect(firstOverlay).not.toBeNull()
+    expect(document.getElementById('helpOverlay')).not.toBeNull()
 
     helpSystem.showControlsHelp()
-    expect(firstOverlay.style.display).toBe('none')
-    expect(document.querySelectorAll('#helpOverlay').length).toBe(1)
+    expect(document.getElementById('helpOverlay')).toBeNull()
 
     helpSystem.showControlsHelp()
-    expect(firstOverlay.style.display).toBe('block')
+    expect(document.getElementById('helpOverlay')).not.toBeNull()
     expect(document.querySelectorAll('#helpOverlay').length).toBe(1)
   })
 
-  it('toggles the paused state each time help is shown or hidden', () => {
-    expect(gameState.paused).toBe(false)
+  it('toggles the helpDialogOpen state each time help is shown or hidden', () => {
+    expect(gameState.helpDialogOpen).toBeFalsy()
 
     helpSystem.showControlsHelp()
-    expect(gameState.paused).toBe(true)
+    expect(gameState.helpDialogOpen).toBe(true)
 
     helpSystem.showControlsHelp()
-    expect(gameState.paused).toBe(false)
+    expect(gameState.helpDialogOpen).toBe(false)
 
     helpSystem.showControlsHelp()
-    expect(gameState.paused).toBe(true)
+    expect(gameState.helpDialogOpen).toBe(true)
   })
 })

@@ -243,7 +243,7 @@
             "description": "Failed to load resource: the server responded with a status of 404 ()",
             "sourceLocation": {
               "type": "source-location",
-              "url": "https://raw.githubusercontent.com/codeandconquer/llm-costs/main/llm-costs.json",
+              "url": "https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json",
               "urlProvider": "network",
               "line": 0,
               "column": 0
@@ -2117,7 +2117,7 @@
             "entity": "localhost"
           },
           {
-            "url": "https://raw.githubusercontent.com/codeandconquer/llm-costs/main/llm-costs.json",
+            "url": "https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json",
             "sessionTargetType": "page",
             "protocol": "h2",
             "rendererStartTime": 1134.6439999341965,
@@ -4681,7 +4681,7 @@
           },
           {
             "index": "11",
-            "line": "  <title>CodeAndConquer</title>",
+            "line": "  <title>Code for Battle</title>",
             "message": "Syntax not understood"
           },
           {
@@ -10106,7 +10106,7 @@
                           "children": {}
                         },
                         "48918.157": {
-                          "url": "https://raw.githubusercontent.com/codeandconquer/llm-costs/main/llm-costs.json",
+                          "url": "https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json",
                           "navStartToEndTime": 2529,
                           "transferSize": 507,
                           "children": {}
@@ -10247,7 +10247,7 @@
               "type": "subitems",
               "items": [
                 {
-                  "url": "https://raw.githubusercontent.com/codeandconquer/llm-costs/main/llm-costs.json",
+                  "url": "https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json",
                   "mainThreadTime": 0,
                   "transferSize": 507
                 }

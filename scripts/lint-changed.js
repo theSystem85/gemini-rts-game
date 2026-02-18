@@ -9,16 +9,29 @@ if (status.status !== 0) {
 
 const changedFiles = status.stdout
   .split('\n')
-  .map((line) => line.trim())
-  .filter(Boolean)
+  .map((line) => line.trimEnd())
+  .filter((line) => line.trim().length > 0)
   .map((line) => {
-    const entry = line.slice(3).trim();
-
-    if (entry.includes(' -> ')) {
-      return entry.split(' -> ').at(-1)?.trim();
+    const match = line.match(/^(.{2})\s(.*)$/u);
+    if (!match) {
+      return null;
     }
 
-    return entry;
+    let entry = match[2].trim();
+
+    if (entry.includes(' -> ')) {
+      entry = entry.split(' -> ').at(-1)?.trim() || '';
+    }
+
+    if (entry.startsWith('"') && entry.endsWith('"')) {
+      try {
+        entry = JSON.parse(entry);
+      } catch {
+        entry = entry.slice(1, -1);
+      }
+    }
+
+    return entry || null;
   })
   .filter((file) => {
     if (!file) {

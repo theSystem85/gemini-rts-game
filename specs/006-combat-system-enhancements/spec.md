@@ -5,7 +5,7 @@
 **Status**: Implemented (Retrospective Documentation)  
 **Input**: User description: "Hit zone damage system, recoil and muzzle flash effects, enemy retaliation, tank variants (V2/V3), rocket tank improvements, and target indicators"
 
-**Note**: This is a retrospective specification documenting an already-implemented feature for the CodeAndConquer RTS game.
+**Note**: This is a retrospective specification documenting an already-implemented feature for the Code for Battle RTS game.
 
 ## Maintenance Updates
 

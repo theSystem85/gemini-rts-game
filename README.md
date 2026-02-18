@@ -1,4 +1,4 @@
-# CodeAndConquer
+# Code for Battle
 
 [Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/theSystem85/gemini-rts-game)
 
@@ -20,7 +20,7 @@ Develop a fully functional, minimal viable product (MVP) of a real-time strategy
 
 ## 1. Intro
 
-**1.1** CodeAndConquer – a test project to build a complex RTS game from scratch using a 1M token context window.
+**1.1** Code for Battle – a test project to build a complex RTS game from scratch using a 1M token context window.
 
 ## 2. General Setup
 

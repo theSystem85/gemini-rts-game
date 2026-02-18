@@ -30,6 +30,7 @@ const HOST_CONTROL_BUTTONS = [
 let partyListContainer = null
 let sessionObserverCleanup = null
 let partyOwnershipCleanup = null
+let reconnectTimerHandle = null
 
 /**
  * Get the stored player alias from localStorage
@@ -457,6 +458,15 @@ export function initSidebarMultiplayer() {
   setupQrScanner()
   // Note: Host polling is started only when user clicks "Invite" button (handleInviteClick)
   // This prevents unnecessary polling before a user actively shares an invite link
+
+  if (!reconnectTimerHandle) {
+    reconnectTimerHandle = setInterval(() => {
+      const hasUnresponsive = listPartyStates().some(party => party.unresponsiveSince)
+      if (hasUnresponsive) {
+        refreshSidebarMultiplayer()
+      }
+    }, 1000)
+  }
 }
 
 export function refreshSidebarMultiplayer() {
@@ -536,6 +546,7 @@ function updateHostControlAccessibility(session) {
 function createPartyRow(partyState) {
   const row = document.createElement('div')
   row.className = 'multiplayer-party-row'
+  row.dataset.testid = `multiplayer-party-row-${partyState.partyId}`
 
   const info = document.createElement('div')
   info.className = 'multiplayer-party-info'
@@ -549,6 +560,7 @@ function createPartyRow(partyState) {
   const label = document.createElement('span')
   label.className = 'multiplayer-party-label'
   label.textContent = partyState.owner
+  label.dataset.testid = `multiplayer-party-label-${partyState.partyId}`
   info.appendChild(label)
 
   const controls = document.createElement('div')
@@ -557,6 +569,7 @@ function createPartyRow(partyState) {
   const status = document.createElement('span')
   status.className = 'multiplayer-party-status'
   status.setAttribute('aria-live', 'polite')
+  status.dataset.testid = `multiplayer-party-status-${partyState.partyId}`
 
   // Check if a human player is connected (not AI and not the host)
   const isHumanConnected = !partyState.aiActive && partyState.partyId !== gameState.humanPlayer
@@ -570,6 +583,7 @@ function createPartyRow(partyState) {
     kickButton.type = 'button'
     kickButton.className = 'multiplayer-invite-button multiplayer-kick-button'
     kickButton.textContent = 'Kick'
+    kickButton.dataset.testid = `multiplayer-kick-${partyState.partyId}`
     kickButton.addEventListener('click', () => handleKickClick(partyState, kickButton))
     controls.appendChild(kickButton)
   } else {
@@ -588,6 +602,7 @@ function createPartyRow(partyState) {
     inviteButton.type = 'button'
     inviteButton.className = 'multiplayer-invite-button'
     inviteButton.textContent = 'Invite'
+    inviteButton.dataset.testid = `multiplayer-invite-${partyState.partyId}`
     inviteButton.addEventListener('click', () => handleInviteClick(partyState, inviteButton, status))
 
     controls.appendChild(inviteButton)
@@ -656,6 +671,13 @@ function getPartyDisplayName(partyId, color) {
 }
 
 function formatStatusText(statusKey, partyState) {
+  if (partyState.unresponsiveSince) {
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - partyState.unresponsiveSince) / 1000))
+    const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')
+    const seconds = (elapsedSeconds % 60).toString().padStart(2, '0')
+    return `Reconnecting ${minutes}:${seconds}`
+  }
+
   switch (statusKey) {
     case 'generating':
       return 'Generating invite...'

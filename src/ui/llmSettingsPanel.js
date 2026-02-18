@@ -9,6 +9,8 @@ const PROVIDERS = [
   { id: 'ollama', label: 'Ollama' }
 ]
 
+const ENABLED_PROVIDER_IDS = new Set(['openai'])
+
 function setSelectOptions(select, options, placeholder = 'Select model') {
   if (!select) return
   select.innerHTML = ''
@@ -66,6 +68,8 @@ function attachVoiceOptions(select, settings) {
 const PROVIDERS_REQUIRING_KEY = new Set(['openai', 'anthropic', 'xai'])
 
 async function refreshProviderModels(providerId, settings, { silent = false } = {}) {
+  if (!ENABLED_PROVIDER_IDS.has(providerId)) return
+
   // Skip providers that require an API key when none is set
   if (PROVIDERS_REQUIRING_KEY.has(providerId)) {
     const apiKey = settings.providers?.[providerId]?.apiKey || ''
@@ -108,6 +112,8 @@ function readAndStoreProviderInput(providerId) {
 }
 
 function bindProviderInputs(providerId, settings) {
+  if (!ENABLED_PROVIDER_IDS.has(providerId)) return
+
   const apiKeyInput = document.getElementById(`llmApiKey-${providerId}`)
   const baseUrlInput = document.getElementById(`llmBaseUrl-${providerId}`)
   const modelSelect = document.getElementById(`llmModel-${providerId}`)
@@ -171,9 +177,14 @@ function bindStrategicSettings(settings) {
   }
 
   if (providerSelect) {
-    providerSelect.value = settings.strategic.provider || 'openai'
+    providerSelect.value = 'openai'
+    providerSelect.disabled = true
+    if (settings.strategic.provider !== 'openai') {
+      updateLlmSettings({ strategic: { provider: 'openai' } })
+    }
     providerSelect.addEventListener('change', () => {
-      updateLlmSettings({ strategic: { provider: providerSelect.value } })
+      updateLlmSettings({ strategic: { provider: 'openai' } })
+      providerSelect.value = 'openai'
     })
   }
 
@@ -200,9 +211,14 @@ function bindCommentarySettings(settings) {
   }
 
   if (providerSelect) {
-    providerSelect.value = settings.commentary.provider || 'openai'
+    providerSelect.value = 'openai'
+    providerSelect.disabled = true
+    if (settings.commentary.provider !== 'openai') {
+      updateLlmSettings({ commentary: { provider: 'openai' } })
+    }
     providerSelect.addEventListener('change', () => {
-      updateLlmSettings({ commentary: { provider: providerSelect.value } })
+      updateLlmSettings({ commentary: { provider: 'openai' } })
+      providerSelect.value = 'openai'
     })
   }
 
@@ -237,7 +253,7 @@ function bindCommentarySettings(settings) {
 function populateProviderSelect(select) {
   if (!select) return
   select.innerHTML = ''
-  PROVIDERS.forEach(provider => {
+  PROVIDERS.filter(provider => ENABLED_PROVIDER_IDS.has(provider.id)).forEach(provider => {
     const option = document.createElement('option')
     option.value = provider.id
     option.textContent = provider.label

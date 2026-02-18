@@ -62,6 +62,16 @@ class TutorialSystem {
     this.speaking = false
     this.minimized = false
     this.steps = buildTutorialSteps()
+    this.isInviteSession = false
+
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search || '')
+        this.isInviteSession = Boolean(params.get('invite'))
+      } catch {
+        this.isInviteSession = false
+      }
+    }
   }
 
   getDefaultPosition() {
@@ -98,6 +108,13 @@ class TutorialSystem {
     this.bindSettingsControls()
     this.bindActionTracking()
     this.bindLayoutChangeListeners()
+
+    if (this.isInviteSession) {
+      this.settings.showTutorial = false
+      this.progress.completed = true
+      this.hideUI()
+      return
+    }
 
     // Hide dock button if tutorial is disabled or completed
     if ((!this.settings.showTutorial || this.progress.completed) && this.dockButton) {

@@ -1,5 +1,46 @@
+- [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
+- [x] HUD mode 4 (donut) polish: remove yellow selection box, make donut bars 2px thinner, and raise XP stars to avoid overlap with the top HUD arc.
+- [x] Add a selected-tank HUD preview inside Settings next to the HUD style selector, and add a persistent HUD bar-thickness input (default 3px) restored from localStorage on load.
+- [x] Refine HUD settings preview to use a real rocket tank and mirror in-map HUD rendering for modes 1/2; set default HUD bar thickness to 4px; move HUD4 XP stars higher and slightly right.
+- [ ] Add settings dropdown for selected-unit HUD rendering modes (classic pre-refactor, modern with border, modern without border + corner crew markers).
+- [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
+- [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.
 ## Improvements
+<<<<<<< codex/move-notification-bell-icon-to-top-left
 - [x] Move the mobile landscape notification bell icon from top-right to the top-left safe-area position.
+=======
+- [x] Temporarily lock LLM settings to OpenAI only: remove invalid remote cost URL usage, keep other provider sections visible but collapsed, and show a "coming soon!" hint for Anthropic/xAI/Ollama.
+- [x] Rename all in-repo and in-game title variants to Code for Battle.
+- [x] Change extended multiplayer full-assault win condition to complete when all BLUE structures are destroyed (buildings + factories, excluding walls), without waiting for total BLUE unit elimination or victory screen flow.
+- [x] Replace flaky UI-mouse AGF in extended multiplayer E2E with deterministic programmatic AGF-equivalent engine commands (selected combat units + attack queue + attackGroupTargets) so all BLUE structure targets remain visibly highlighted during selection.
+- [x] Ensure extended multiplayer assault uses real UI AGF drag per human party (HOST/RED/YELLOW) over the full BLUE base so all BLUE structures (construction yard, refinery, vehicle factory, power plant) are included as attack targets.
+- [x] Fix extended multiplayer assault so RED/YELLOW/HOST all receive host-authoritative AGF orders (not client-local commands) and target BLUE structures only (buildings/factories), with immediate re-issue whenever new tanks become ready.
+- [x] Fix multiplayer remote economy authority so host deducts per-party production costs for remote build/spawn commands and clients no longer locally debit/refund money during remote production progress.
+- [x] Simplify the extended multiplayer E2E variant to reuse baseline flow, build to 2 tanks per human party, and issue immediate AGF assaults to BLUE whenever a new tank is ready until BLUE is eliminated.
+- [x] Enable hardware GPU acceleration defaults for headed multiplayer Playwright role browsers (prefer Chrome channel + GPU flags) and run HOST/RED/YELLOW build progression in parallel instead of sequentially.
+- [x] Keep multiplayer remote-command/network processing active during paused frames (zero-delta paused tick) so invite join handshakes can complete before host resume.
+- [x] Stabilize multiplayer invite joins by requiring client-side remote session `connected` state and host-side human party confirmation (`aiActive === false`) before resume.
+- [x] Align multiplayer E2E browser window and rendered content sizes (no viewport-window mismatch), enforce host stays paused until all invited parties connect, and assert per-party refinery unload income accounting for HOST/RED/YELLOW.
+- [x] Update Netlify multiplayer E2E so HOST/RED/YELLOW each build their own visible progression (power plant → ore refinery → vehicle factory → harvester → tank) using normal production flow, without direct spawn/provision shortcuts.
+- [x] Ensure benchmark results modal stays hidden on startup and opens only lazily when a benchmark run completes.
+- [x] Ensure Netlify multiplayer E2E closes the host invite/QR modal after YELLOW invite flow before provisioning/combat assertions.
+- [x] Ensure host (GREEN/player1) builds the same required progression as RED/YELLOW in multiplayer E2E (construction yard, power plant, ore refinery, vehicle factory) and participates in BLUE-targeted combat.
+- [x] Improve headed Playwright multiplayer FPS: keep Chromium frame pacing stable by default (remove uncapped rendering flags), cap per-role window size for lower GPU load, and make browser channel/uncapped rendering opt-in via env (`PLAYWRIGHT_BROWSER_CHANNEL`, `PLAYWRIGHT_UNCAPPED_RENDERING`).
+- [x] Fix multiplayer Netlify 4-party E2E party mapping to match UI colors (`player3=Blue`, `player4=Yellow`): invite RED (`player2`) + YELLOW (`player4`), keep BLUE (`player3`) as AI, and update combat setup so all human tanks (GREEN/RED/YELLOW) focus-fire BLUE AI.
+- [x] Improve headed Playwright multiplayer performance by launching role browsers with anti-throttling Chromium flags (`--disable-background-timer-throttling`, `--disable-backgrounding-occluded-windows`, `--disable-renderer-backgrounding`) to reduce FPS drops in non-focused windows.
+- [x] Fix headed-window relocation across displays by launching HOST/RED/YELLOW in separate Chromium browser processes (instead of contexts within one shared browser), preventing CDP window-bound collisions that moved the host window back to the smaller screen.
+- [x] Detect largest available host display (macOS via `system_profiler`) in multiplayer E2E runner and pass screen dimensions into the test so host/RED/YELLOW windows are positioned across that largest monitor.
+- [x] Optimize multiplayer invite setup speed: open RED/YELLOW clients directly on `/?invite=...` (skip loading home + sidebar paste flow), keep explicit QR modal dismissal after each invite, and position HOST/RED/YELLOW windows on screen edges via Chromium CDP bounds for non-overlapping headed runs.
+- [x] Multiplayer E2E invite stabilization: expand Map Settings accordion before filling host map inputs, scroll sidebar to multiplayer invite section before invite/join interactions, auto-dismiss invite QR modal between consecutive invites, and add timestamped verbose step logs for host/client invite operations.
+- [x] Prevent agent hang after multiplayer E2E by wrapping `npm run test:e2e:multiplayer` with `PLAYWRIGHT_HTML_OPEN=never` and post-run cleanup that force-kills any leftover report server on port `9323`.
+- [x] Multiplayer E2E invite hardening: make host generate/copy RED invite first, then launch RED browser and paste invite link into the in-game join input; if paste-triggered navigation fails, fallback to direct `/?invite=` open, and only launch YELLOW browser after YELLOW invite is copied.
+- [x] Fix multiplayer E2E test: pass `baseURL` to each `browser.newContext()` (Playwright does NOT inherit `config.use.baseURL` for manually created contexts), navigate clients directly to invite URLs, simplify join flow, and remove stale `test.use({ headless: false })` override.
+- [x] Harden multiplayer Netlify E2E invite flow: suppress tutorial on invite sessions, pause host immediately after startup to prevent AI pre-actions, use RED/YELLOW invite-link paste join flow only (BLUE stays AI), resume when human joins are connected, and switch setup defaults to seed `4` with `40x40` map.
+- [x] Add startup query-param map overrides (`size`, `width`, `height`, `players`, `seed`) that dominate localStorage for the current session only (non-persistent), and update the Netlify multiplayer E2E host flow to use `?size=25&players=4&seed=11` with only 3 browsers (host/red/yellow) while blue remains local AI.
+- [x] Refine the Netlify 4-party multiplayer Playwright E2E to enforce host setup choreography: host sets 25x25/4 players, minimizes tutorial, pauses before invites, opens RED/YELLOW invite links with alias submission, keeps BLUE as AI, resumes only after human joins, then validates GREEN/RED/YELLOW build-out and tank-vs-tank combat.
+- [x] Force Netlify multiplayer Playwright runs into non-headless mode (visible windows) and harden 4-party E2E teardown/timeouts to avoid diverging/pending runs.
+- [x] Add a Netlify-dev Playwright E2E that simulates a 4-party multiplayer session (host + 2 remote humans + 1 AI), validates per-party build-out, harvester income sync, movement sync, projectile sync, and destroyed-unit sync on a 25x25 map.
+>>>>>>> main
 - [x] Replace the minimize and docs buttons in the tutorial modal with icons (no text) and add tooltip labels. Fixed icon being overwritten by renderStep method.
 - [x] Comprehensive user documentation rewrite: mobile-responsive borderless design, 14 sections covering all game systems (tech tree graph, HUD explanation, crew system, XP/promotions, fuel/ammo logistics, mine system, remote control, multiplayer, combat mechanics, keyboard reference), complete numerical stats for all 13 units and 18 buildings.
 - [x] Implemented lighthouse spec 04 main-thread long-task reduction by introducing startup task scheduling (post-paint + idle deferrals) and startup performance markers for init phases.
@@ -681,3 +722,4 @@
 - [x] Harvesters can only bring the ore the the refinery not to the construction yard anymore. At the refinery it takes the harvester 20s to unload the ore before it can go again to harvest automatically. At each refinery there can only be on harvester at the time being unloaded all othery have to wait for it.
 - [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use. 
 - [x] Added npm script 'test:e2e:file' to run specific E2E test files in headless mode
+- [x] Improve multiplayer network stability with heartbeat-based responsiveness checks, forced host/client pause while reconnecting, delayed AI takeover fallback, and reconnect timer visibility for hosts and clients (2-4 player compatible).

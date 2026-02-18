@@ -5,7 +5,7 @@
 **Status**: Implemented (Retrospective Documentation)  
 **Input**: User description: "Remote control, guard mode, path planning, and attack group features for enhanced tactical unit management"
 
-**Note**: This is a retrospective specification documenting an already-implemented feature for the CodeAndConquer RTS game.
+**Note**: This is a retrospective specification documenting an already-implemented feature for the Code for Battle RTS game.
 
 ## User Scenarios & Testing
 

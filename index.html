@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>CodeAndConquer</title>
+  <title>Code for Battle</title>
   <meta name="description" content="A 2D tile-based Real-Time Strategy game built with vanilla JavaScript">
 
   <!-- Favicons -->
@@ -765,6 +765,26 @@
               <input type="checkbox" id="desktopEdgeAutoscrollToggle">
               <span>Enable desktop edge auto-scroll</span>
             </label>
+            <div class="config-modal__hud-settings-row">
+              <div class="config-modal__hud-settings-controls">
+                <label class="config-modal__field">
+                  <span>Unit selection HUD style:</span>
+                  <select id="selectionHudModeSelect" class="config-modal__select">
+                    <option value="legacy">Classic (pre-refactor)</option>
+                    <option value="modern">Modern (outlined)</option>
+                    <option value="modern-no-border">Modern (corner crew, no border)</option>
+                    <option value="modern-donut">Modern (donut arcs + edge crew)</option>
+                  </select>
+                </label>
+                <label class="config-modal__field">
+                  <span>HUD bar thickness (px):</span>
+                  <input type="number" id="selectionHudBarThicknessInput" min="1" max="8" step="1" value="4">
+                </label>
+              </div>
+              <div class="config-modal__hud-preview-wrap" aria-label="Selected tank HUD preview">
+                <canvas id="selectionHudPreviewCanvas" width="180" height="120"></canvas>
+              </div>
+            </div>
           </div>
           <div class="config-modal__section">
             <h3 class="config-modal__section-title">LLM Strategic AI</h3>
@@ -832,51 +852,69 @@
               </label>
               <button class="config-modal__button" id="llmRefresh-openai" type="button">Refresh OpenAI models</button>
             </div>
-            <div class="config-modal__subsection">
-              <h4 class="config-modal__section-title">Anthropic</h4>
-              <label class="config-modal__field">
-                <span>API key:</span>
-                <input type="password" id="llmApiKey-anthropic" autocomplete="off" placeholder="sk-ant-...">
-              </label>
-              <label class="config-modal__field">
-                <span>Base URL:</span>
-                <input type="text" id="llmBaseUrl-anthropic" placeholder="https://api.anthropic.com">
-              </label>
-              <label class="config-modal__field">
-                <span>Model:</span>
-                <select id="llmModel-anthropic" class="config-modal__select"></select>
-              </label>
-              <button class="config-modal__button" id="llmRefresh-anthropic" type="button">Refresh Anthropic
-                models</button>
-            </div>
-            <div class="config-modal__subsection">
-              <h4 class="config-modal__section-title">xAI</h4>
-              <label class="config-modal__field">
-                <span>API key:</span>
-                <input type="password" id="llmApiKey-xai" autocomplete="off" placeholder="xai-...">
-              </label>
-              <label class="config-modal__field">
-                <span>Base URL:</span>
-                <input type="text" id="llmBaseUrl-xai" placeholder="https://api.x.ai/v1">
-              </label>
-              <label class="config-modal__field">
-                <span>Model:</span>
-                <select id="llmModel-xai" class="config-modal__select"></select>
-              </label>
-              <button class="config-modal__button" id="llmRefresh-xai" type="button">Refresh xAI models</button>
-            </div>
-            <div class="config-modal__subsection">
-              <h4 class="config-modal__section-title">Ollama</h4>
-              <label class="config-modal__field">
-                <span>Base URL:</span>
-                <input type="text" id="llmBaseUrl-ollama" placeholder="http://localhost:11434">
-              </label>
-              <label class="config-modal__field">
-                <span>Model:</span>
-                <select id="llmModel-ollama" class="config-modal__select"></select>
-              </label>
-              <button class="config-modal__button" id="llmRefresh-ollama" type="button">Refresh Ollama models</button>
-            </div>
+            <details class="config-modal__subsection config-modal__subsection--locked">
+              <summary class="config-modal__subsection-summary">
+                <h4 class="config-modal__section-title">Anthropic</h4>
+                <span class="config-modal__hint">coming soon!</span>
+              </summary>
+              <div class="config-modal__locked-content">
+                <label class="config-modal__field">
+                  <span>API key:</span>
+                  <input type="password" id="llmApiKey-anthropic" autocomplete="off" placeholder="sk-ant-..." disabled>
+                </label>
+                <label class="config-modal__field">
+                  <span>Base URL:</span>
+                  <input type="text" id="llmBaseUrl-anthropic" placeholder="https://api.anthropic.com" disabled>
+                </label>
+                <label class="config-modal__field">
+                  <span>Model:</span>
+                  <select id="llmModel-anthropic" class="config-modal__select" disabled></select>
+                </label>
+                <button class="config-modal__button" id="llmRefresh-anthropic" type="button" disabled>Refresh Anthropic
+                  models</button>
+                <div class="config-modal__note">Anthropic provider settings are coming soon!</div>
+              </div>
+            </details>
+            <details class="config-modal__subsection config-modal__subsection--locked">
+              <summary class="config-modal__subsection-summary">
+                <h4 class="config-modal__section-title">xAI</h4>
+                <span class="config-modal__hint">coming soon!</span>
+              </summary>
+              <div class="config-modal__locked-content">
+                <label class="config-modal__field">
+                  <span>API key:</span>
+                  <input type="password" id="llmApiKey-xai" autocomplete="off" placeholder="xai-..." disabled>
+                </label>
+                <label class="config-modal__field">
+                  <span>Base URL:</span>
+                  <input type="text" id="llmBaseUrl-xai" placeholder="https://api.x.ai/v1" disabled>
+                </label>
+                <label class="config-modal__field">
+                  <span>Model:</span>
+                  <select id="llmModel-xai" class="config-modal__select" disabled></select>
+                </label>
+                <button class="config-modal__button" id="llmRefresh-xai" type="button" disabled>Refresh xAI models</button>
+                <div class="config-modal__note">xAI provider settings are coming soon!</div>
+              </div>
+            </details>
+            <details class="config-modal__subsection config-modal__subsection--locked">
+              <summary class="config-modal__subsection-summary">
+                <h4 class="config-modal__section-title">Ollama</h4>
+                <span class="config-modal__hint">coming soon!</span>
+              </summary>
+              <div class="config-modal__locked-content">
+                <label class="config-modal__field">
+                  <span>Base URL:</span>
+                  <input type="text" id="llmBaseUrl-ollama" placeholder="http://localhost:11434" disabled>
+                </label>
+                <label class="config-modal__field">
+                  <span>Model:</span>
+                  <select id="llmModel-ollama" class="config-modal__select" disabled></select>
+                </label>
+                <button class="config-modal__button" id="llmRefresh-ollama" type="button" disabled>Refresh Ollama models</button>
+                <div class="config-modal__note">Ollama provider settings are coming soon!</div>
+              </div>
+            </details>
           </div>
         </div>
         <div class="config-modal__content" data-config-tab-panel="keybindings" hidden>
@@ -915,7 +953,7 @@
     </div>
   </div>
 
-  <div id="benchmarkModal" class="benchmark-modal" aria-hidden="true">
+  <div id="benchmarkModal" class="benchmark-modal modal-hidden" aria-hidden="true">
     <div class="benchmark-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="benchmarkModalTitle">
       <div class="benchmark-modal__header">
         <h2 id="benchmarkModalTitle">Performance Benchmark</h2>
@@ -1000,7 +1038,7 @@
   <div id="userDocsModal" class="user-docs-modal hidden" aria-hidden="true">
     <div class="user-docs-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="userDocsTitle">
       <div class="user-docs-modal__header">
-        <h2 id="userDocsTitle">Code & Conquer — User Documentation</h2>
+        <h2 id="userDocsTitle">Code for Battle — User Documentation</h2>
         <button id="userDocsCloseBtn" class="user-docs-modal__close" type="button" aria-label="Close documentation">×</button>
       </div>
       <iframe id="userDocsFrame" class="user-docs-modal__frame" title="User documentation" loading="lazy"></iframe>

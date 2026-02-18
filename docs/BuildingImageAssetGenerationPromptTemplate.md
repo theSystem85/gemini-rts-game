@@ -83,6 +83,6 @@ This determines the **final downscaled map sprite resolution**.
 ### ✅ Notes
 - Avoid cartoon-like outlines or over-saturated colors.  
 - All renders should look **gritty, large-scale, and functional**,  
-  like a real-world military or industrial base from the Command & Conquer era.
+  like a real-world military or industrial base.
 
 now generate all assets for a technology research center with the footprint 2x3 tiles

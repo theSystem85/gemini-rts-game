@@ -1,4 +1,4 @@
-# CodeAndConquer - Documentation
+# Code for Battle - Documentation
 
 ## Enemy Unit Retaliation System
 
@@ -439,3 +439,111 @@ This system transforms combat from simple unit expenditure to strategic unit dev
 - Start the Express-based signalling helper with `npm run stun` before sending or opening invite links.
 - Run `npm run dev` for the Vite client simultaneously so the helper listening on http://localhost:3333 can fulfill `/signalling/offer`, `/signalling/answer`, `/signalling/candidate`, and `/game-instance/:id/invite-regenerate` per `specs/001-add-online-multiplayer/contracts/multiplayer-api.yaml`.
 - Keep both processes alive while testing invites so browsers can exchange WebRTC metadata without a dedicated gaming server.
+
+---
+
+## Multiplayer Network Stability (Human + AI, 2-4 Players)
+
+### Why multiplayer connectivity can become unstable
+
+Common causes in the current WebRTC + deterministic lockstep architecture:
+
+- **Transient network jitter / packet loss** can delay or drop control payloads.
+- **Data channel stalls** may occur while ICE is recovering even when browser tab is still open.
+- **Lockstep sensitivity** means delayed remote inputs can stall deterministic progression.
+- **Immediate AI takeover on disconnect** can cause abrupt ownership changes during short-lived outages.
+
+### Improvements implemented
+
+1. **Heartbeat-based responsiveness detection**
+   - Host sends `heartbeat-ping` regularly.
+   - Clients reply with `heartbeat-pong`.
+   - Missing heartbeats beyond timeout mark the client as unresponsive.
+
+2. **Global forced pause during unresponsive windows**
+   - Host pauses the match while waiting for reconnection.
+   - This avoids lockstep divergence and unfair gameplay progression.
+
+3. **Unresponsiveness timer shown to everyone**
+   - Host sidebar shows per-party reconnect timer (`Reconnecting MM:SS`).
+   - Clients display a banner including reconnecting alias + timer.
+
+4. **Delayed AI takeover (grace period)**
+   - AI takeover no longer happens immediately.
+   - A configurable grace period allows reconnect before ownership returns to AI.
+
+5. **Per-party responsiveness state for mixed constellations**
+   - Responsiveness metadata is stored on each party.
+   - Supports combinations of AI/human parties in 2, 3, and 4 player games.
+
+### Runtime flow diagram
+
+```mermaid
+flowchart TD
+    A[Host status interval tick] --> B[Send host-status to all sessions]
+    B --> C[Send heartbeat-ping]
+    C --> D{Client replies heartbeat-pong in time?}
+    D -->|Yes| E[Mark session responsive]
+    E --> F{Any unresponsive sessions left?}
+    F -->|No| G[Release forced pause if host did not pause manually]
+    D -->|No| H[Mark party unresponsiveSince]
+    H --> I[Force gamePaused=true]
+    I --> J[Broadcast unresponsive metadata + timer]
+    J --> K[Start AI fallback grace timer]
+    K --> L{Recovered before grace timeout?}
+    L -->|Yes| E
+    L -->|No| M[Set party back to AI + emit reactivation event]
+```
+
+### Message-level sequence
+
+```mermaid
+sequenceDiagram
+    participant Host
+    participant Client
+    participant UI
+
+    loop every status interval
+      Host->>Client: host-status {paused, running, unresponsive}
+      Host->>Client: heartbeat-ping
+      Client->>Host: heartbeat-pong
+    end
+
+    alt Heartbeat timeout
+      Host->>Host: mark unresponsiveSince
+      Host->>Host: force game pause
+      Host->>UI: host notification + host timer in party row
+      Host->>Client: host-status with unresponsive timer context
+      Client->>UI: show reconnect banner with MM:SS
+    else Heartbeat restored
+      Host->>Host: clear unresponsiveSince
+      Host->>Host: release forced pause
+      Host->>UI: resumed notification
+      Client->>UI: hide reconnect banner
+    end
+
+    alt Grace timeout expires
+      Host->>Host: party ownership -> AI
+      Host->>UI: notify AI takeover
+    end
+```
+
+### Component architecture
+
+```mermaid
+graph LR
+    A[src/network/webrtcSession.js] --> B[Heartbeat + unresponsive detector]
+    A --> C[Forced pause controller]
+    A --> D[Delayed AI takeover]
+    A --> E[src/network/multiplayerStore.js]
+    E --> F[party.unresponsiveSince state]
+    F --> G[src/ui/sidebarMultiplayer.js host timer]
+    A --> H[src/ui/remoteInviteLanding.js client banner + timer]
+    A --> I[src/network/gameCommandSync.js state sync + lockstep integration]
+```
+
+### 2-4 player compatibility notes
+
+- Party metadata remains per-party (`partyId`) and scales with configured party count.
+- Unresponsive handling is scoped to affected remote party and does not assume a fixed 2-player model.
+- AI/human combinations remain valid because ownership (`aiActive`) and responsiveness (`unresponsiveSince`) are independent fields.
