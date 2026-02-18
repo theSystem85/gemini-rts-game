@@ -6,6 +6,7 @@
 - [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
 - [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.
 ## Improvements
+- [x] Move the mobile landscape notification bell icon from top-right to the top-left safe-area position.
 - [x] Temporarily lock LLM settings to OpenAI only: remove invalid remote cost URL usage, keep other provider sections visible but collapsed, and show a "coming soon!" hint for Anthropic/xAI/Ollama.
 - [x] Rename all in-repo and in-game title variants to Code for Battle.
 - [x] Change extended multiplayer full-assault win condition to complete when all BLUE structures are destroyed (buildings + factories, excluding walls), without waiting for total BLUE unit elimination or victory screen flow.
