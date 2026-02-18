@@ -1082,7 +1082,9 @@ body.mobile-landscape #mobileCategoryToggle {
   color: #f0f0f0;
   text-align: left;
   letter-spacing: 0.02em;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
   text-align: center;
 }
 

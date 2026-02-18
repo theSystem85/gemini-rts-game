@@ -27,3 +27,8 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
 ## Update 2026-02-17
 
 - **Notification Bell Placement**: In mobile landscape mode, the notification history bell icon must render at the top-left and respect `var(--safe-area-left)` so it stays clear of notches and system insets.
+
+## Update 2026-02-18
+
+- **Production Toggle Legibility**: In mobile landscape mode, the production category toggle label must render in uppercase with a reduced font size so `BUILDINGS` always fits the available width.
+- **Short Building Labels (Landscape Only)**: In mobile landscape mode, long building names shown on production buttons must switch to compact labels (e.g., `Vehicle Fab`, `Radar`, `Workshop`, `Ammo Fab`, `Turret V1/V2/V3`) while preserving full names in all non-landscape layouts.
