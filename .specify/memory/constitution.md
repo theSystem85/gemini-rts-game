@@ -15,7 +15,7 @@ Templates Status:
 Follow-up TODOs: None
 -->
 
-# CodeAndConquer Constitution
+# Code for Battle Constitution
 
 ## Core Principles
 

@@ -9,7 +9,7 @@
 
 ## Overview
 
-This specification documents the comprehensive multi-player AI system that powers computer-controlled opponents in CodeAndConquer. The system supports up to 4 parties (1 human player + 3 AI players), each with independent resource management, base building, unit production, and strategic decision-making. AI players exhibit distinct behaviors including aggressive expansion, defensive positioning, and adaptive combat tactics.
+This specification documents the comprehensive multi-player AI system that powers computer-controlled opponents in Code for Battle. The system supports up to 4 parties (1 human player + 3 AI players), each with independent resource management, base building, unit production, and strategic decision-making. AI players exhibit distinct behaviors including aggressive expansion, defensive positioning, and adaptive combat tactics.
 
 ## Testing Notes
 
@@ -596,4 +596,3 @@ This specification documents the comprehensive multi-player AI system that power
 - Strategic AI system: src/ai/enemyAIPlayer.js (party-level decisions)
 - Pathfinding algorithm: src/game/pathfinding.js (A* implementation)
 - RTS AI design patterns: "Behavioral Mathematics for Game AI" chapter on FSM and utility systems
-- Command & Conquer AI research: Analysis of classic RTS AI decision-making patterns

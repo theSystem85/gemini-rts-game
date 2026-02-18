@@ -1,6 +1,6 @@
 import { getProviderSettings } from './llmSettings.js'
 
-const REMOTE_COSTS_URL = 'https://raw.githubusercontent.com/codeandconquer/llm-costs/main/llm-costs.json'
+const REMOTE_COSTS_URL = 'https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json'
 const LOCAL_COSTS_URL = '/data/llm-costs.json'
 
 // Custom error class for quota exceeded errors

@@ -1,4 +1,4 @@
-# CodeAndConquer - Documentation
+# Code for Battle - Documentation
 
 ## Enemy Unit Retaliation System
 

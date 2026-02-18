@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Rename all in-repo and in-game title variants to Code for Battle.
 - [x] Change extended multiplayer full-assault win condition to complete when all BLUE structures are destroyed (buildings + factories, excluding walls), without waiting for total BLUE unit elimination or victory screen flow.
 - [x] Replace flaky UI-mouse AGF in extended multiplayer E2E with deterministic programmatic AGF-equivalent engine commands (selected combat units + attack queue + attackGroupTargets) so all BLUE structure targets remain visibly highlighted during selection.
 - [x] Ensure extended multiplayer assault uses real UI AGF drag per human party (HOST/RED/YELLOW) over the full BLUE base so all BLUE structures (construction yard, refinery, vehicle factory, power plant) are included as attack targets.

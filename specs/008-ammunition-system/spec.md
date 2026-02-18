@@ -761,5 +761,4 @@ Apache helicopters use a separate `rocketAmmo` field instead of `ammunition` for
 - AI resource management: `src/ai/enemyAIPlayer.js`, `src/ai/enemyStrategies.js`
 - HUD bar rendering: `src/rendering/unitRenderer.js` (health bar, fuel bar patterns)
 - Projectile collision system: `src/game/bulletCollision.js`, `src/game/bulletSystem.js`
-- Command & Conquer RTS reference: Ammunition system inspired by Tiberium Wars supply depot mechanics
 - Real-time strategy balance principles: "The Art of Game Balance" - ammunition as consumable resource constraint

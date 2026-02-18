@@ -69,7 +69,7 @@ if ('serviceWorker' in navigator) {
     if (typeof caches !== 'undefined' && caches?.keys) {
       caches.keys().then(cacheNames => {
         cacheNames
-          .filter(name => name.startsWith('codeandconquer-cache-'))
+          .filter(name => name.startsWith('code-for-battle-cache-'))
           .forEach(name => {
             caches.delete(name).catch(err => {
               window.logger.warn('Failed to delete service worker cache', name, err)

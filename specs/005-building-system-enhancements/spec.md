@@ -5,7 +5,7 @@
 **Status**: Implemented (Retrospective Documentation)  
 **Input**: User description: "Drag-and-drop building placement, blueprint mode, chain build mode, construction animations, and individual factory assembly points"
 
-**Note**: This is a retrospective specification documenting an already-implemented feature for the CodeAndConquer RTS game.
+**Note**: This is a retrospective specification documenting an already-implemented feature for the Code for Battle RTS game.
 
 ## User Scenarios & Testing
 

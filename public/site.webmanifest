@@ -1,6 +1,6 @@
 {
-  "name": "CodeAndConquer",
-  "short_name": "CodeAndConquer",
+  "name": "Code for Battle",
+  "short_name": "Code for Battle",
   "description": "A 2D tile-based Real-Time Strategy game built with vanilla JavaScript",
   "icons": [
     {
