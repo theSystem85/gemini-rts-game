@@ -725,3 +725,4 @@
 - [x] Added npm script 'test:e2e:file' to run specific E2E test files in headless mode
 - [x] Improve multiplayer network stability with heartbeat-based responsiveness checks, forced host/client pause while reconnecting, delayed AI takeover fallback, and reconnect timer visibility for hosts and clients (2-4 player compatible).
 - [x] Mobile landscape production category toggle now uses compact uppercase labels so "BUILDINGS" fits reliably, and building button labels use short forms only in mobile landscape (e.g., Vehicle Fab, Radar, Ammo Fab, Turret V1/V2/V3).
+- [x] Mobile landscape build menu now adds extra scroll space below the last production button so the wall button can be fully scrolled into view, and the BUILDINGS toggle label is shifted 5px left to prevent right-edge clipping.

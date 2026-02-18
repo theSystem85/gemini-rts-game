@@ -32,3 +32,5 @@ Landscaped touch layouts on iPhone 13 Pro Max still leave a black bar on the rig
 
 - **Production Toggle Legibility**: In mobile landscape mode, the production category toggle label must render in uppercase with a reduced font size so `BUILDINGS` always fits the available width.
 - **Short Building Labels (Landscape Only)**: In mobile landscape mode, long building names shown on production buttons must switch to compact labels (e.g., `Vehicle Fab`, `Radar`, `Workshop`, `Ammo Fab`, `Turret V1/V2/V3`) while preserving full names in all non-landscape layouts.
+- **Bottom Build Button Visibility**: Mobile landscape production lists must provide enough trailing scroll space so the final build option (including wall buttons) is fully visible and tappable.
+- **Toggle Horizontal Alignment**: In mobile landscape mode, the uppercase `BUILDINGS` toggle label must be shifted 5px left to avoid clipping on the right edge.

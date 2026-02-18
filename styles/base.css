@@ -1060,6 +1060,10 @@ body.mobile-landscape #mobileBuildMenuContainer #production {
   scrollbar-width: none;
 }
 
+body.mobile-landscape #mobileBuildMenuContainer .tab-content.active {
+  padding-bottom: 50%;
+}
+
 body.mobile-landscape #mobileBuildMenuContainer #production::-webkit-scrollbar {
   display: none;
 }
@@ -1086,6 +1090,7 @@ body.mobile-landscape #mobileCategoryToggle {
   font-weight: 700;
   text-transform: uppercase;
   text-align: center;
+  transform: translateX(-5px);
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar {
