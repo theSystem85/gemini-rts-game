@@ -20,12 +20,34 @@ const DEFAULT_STATUS = 'Enter your alias to claim the invited party.'
 /**
  * Show the host paused banner
  */
-function showHostPausedBanner() {
+function formatUnresponsiveTimer(seconds) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0
+  const mins = Math.floor(safeSeconds / 60).toString().padStart(2, '0')
+  const secs = (safeSeconds % 60).toString().padStart(2, '0')
+  return `${mins}:${secs}`
+}
+
+/**
+ * Show the host paused banner
+ */
+function showHostPausedBanner(unresponsiveInfo = null) {
   const banner = document.getElementById('hostPausedBanner')
+  const text = banner?.querySelector('.host-paused-banner__text')
   if (banner) {
     banner.classList.remove('host-paused-banner--hidden')
     banner.setAttribute('aria-hidden', 'false')
   }
+
+  if (text) {
+    if (unresponsiveInfo?.active) {
+      const timer = formatUnresponsiveTimer(unresponsiveInfo.seconds)
+      const alias = unresponsiveInfo.alias || 'A player'
+      text.textContent = `${alias} is reconnecting (${timer})`
+    } else {
+      text.textContent = 'Host has paused the game'
+    }
+  }
+
   // Set flag to block commands (but allow scrolling)
   gameState.hostPausedByRemote = true
 }
@@ -35,9 +57,13 @@ function showHostPausedBanner() {
  */
 function hideHostPausedBanner() {
   const banner = document.getElementById('hostPausedBanner')
+  const text = banner?.querySelector('.host-paused-banner__text')
   if (banner) {
     banner.classList.add('host-paused-banner--hidden')
     banner.setAttribute('aria-hidden', 'true')
+  }
+  if (text) {
+    text.textContent = 'Host has paused the game'
   }
   // Clear the flag to allow commands again
   gameState.hostPausedByRemote = false
@@ -586,19 +612,30 @@ export function initRemoteInviteLanding() {
       return
     }
 
+    if (payload.type === 'heartbeat-ping') {
+      const connection = getActiveRemoteConnection()
+      if (connection) {
+        connection.send({ type: 'heartbeat-pong', timestamp: Date.now() })
+      }
+      return
+    }
+
     // Handle host status messages
     if (payload.type !== 'host-status') {
       return
     }
     const running = Boolean(payload.running)
-    const message = running ? 'Host resumed the game.' : 'Host paused the game.'
-    updateStatus(statusElement, message, !running)
+    const hasUnresponsiveClient = Boolean(payload.unresponsive?.active)
+    const message = hasUnresponsiveClient
+      ? `${payload.unresponsive.alias || 'Player'} is reconnecting...`
+      : running ? 'Host resumed the game.' : 'Host paused the game.'
+    updateStatus(statusElement, message, !running || hasUnresponsiveClient)
 
-    // Show/hide the host paused banner based on running status
-    if (running) {
+    // Show/hide the host paused banner based on running status or unresponsive clients
+    if (running && !hasUnresponsiveClient) {
       hideHostPausedBanner()
     } else {
-      showHostPausedBanner()
+      showHostPausedBanner(payload.unresponsive || null)
     }
   }
 

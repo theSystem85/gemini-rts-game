@@ -53,8 +53,8 @@ export function generateRandomId(prefix = 'id') {
 }
 
 function ensurePartyStates() {
-  if (!Array.isArray(gameState.partyStates) || gameState.partyStates.length === 0) {
-    const partyCount = Math.max(2, Math.min(gameState.playerCount || 2, MAX_MULTIPLAYER_PARTIES))
+  const partyCount = Math.max(2, Math.min(gameState.playerCount || 2, MAX_MULTIPLAYER_PARTIES))
+  if (!Array.isArray(gameState.partyStates) || gameState.partyStates.length === 0 || gameState.partyStates.length !== partyCount) {
     gameState.partyStates = MULTIPLAYER_PARTY_IDS.slice(0, partyCount).map((partyId) => {
       const isHost = partyId === gameState.humanPlayer
       return {
@@ -63,7 +63,8 @@ function ensurePartyStates() {
         owner: isHost ? getHostAliasLabel() : 'AI',
         inviteToken: null,
         aiActive: !isHost,
-        lastConnectedAt: null
+        lastConnectedAt: null,
+        unresponsiveSince: null
       }
     })
   }
@@ -258,6 +259,7 @@ export async function regenerateAllInviteTokens() {
       party.owner = 'AI'
       party.aiActive = true
       party.lastConnectedAt = null
+      party.unresponsiveSince = null
       party.inviteToken = null
 
       // Generate new invite token
@@ -295,6 +297,7 @@ export function markPartyControlledByHuman(partyId, alias) {
   party.owner = alias || 'Human'
   party.aiActive = false
   party.lastConnectedAt = Date.now()
+  party.unresponsiveSince = null
   showHostNotification(`Party ${partyId} taken over by ${party.owner}`)
 
   // Emit event so UI components can update
@@ -329,11 +332,24 @@ export function markPartyControlledByAi(partyId) {
   party.owner = 'AI'
   party.aiActive = true
   party.lastConnectedAt = null
+  party.unresponsiveSince = null
   showHostNotification(`Party ${partyId} returned to AI control`)
 
   // Emit event so UI components can update
   emitPartyOwnershipChange(partyId, 'AI', true)
 
+  return party
+}
+
+
+export function setPartyUnresponsiveState(partyId, unresponsiveSince = null) {
+  const party = getPartyState(partyId)
+  if (!party) {
+    return null
+  }
+
+  party.unresponsiveSince = unresponsiveSince || null
+  emitPartyOwnershipChange(partyId, party.owner, party.aiActive !== false)
   return party
 }
 

@@ -1,5 +1,5 @@
 import { gameState } from '../gameState.js'
-import { markPartyControlledByHuman, markPartyControlledByAi, invalidateInviteToken, generateInviteForParty, getPartyState } from './multiplayerStore.js'
+import { markPartyControlledByHuman, markPartyControlledByAi, invalidateInviteToken, generateInviteForParty, getPartyState, setPartyUnresponsiveState } from './multiplayerStore.js'
 import { showHostNotification } from './hostNotifications.js'
 import { applyRemoteControlSnapshot, releaseRemoteControlSource } from '../input/remoteControlState.js'
 import { emitMultiplayerSessionChange } from './multiplayerSessionEvents.js'
@@ -8,8 +8,9 @@ import { handleReceivedCommand, startGameStateSync, stopGameStateSync, updateNet
 
 const DEFAULT_POLL_INTERVAL_MS = 2000
 const DEFAULT_HOST_STATUS_INTERVAL_MS = 1500
+const HEARTBEAT_TIMEOUT_MS = 6000
 const DEFAULT_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
-const _AI_FALLBACK_DELAY_MS = 2000 // 2 seconds per spec requirement
+const _AI_FALLBACK_DELAY_MS = 30000
 
 // Event type for AI reactivation
 export const AI_REACTIVATION_EVENT = 'partyAiReactivated'
@@ -66,6 +67,9 @@ class HostSession {
     this.candidateCursor = 0
     this.pendingCandidates = []
     this.answerSent = false
+    this.lastResponsiveAt = Date.now()
+    this.unresponsiveSince = null
+    this.aiFallbackHandle = null
     this.dataChannel = null
     this.pc = new RTCPeerConnection(rtcConfig)
     this.onStateChange = onStateChange
@@ -124,6 +128,10 @@ class HostSession {
   }
 
   dispose() {
+    if (this.aiFallbackHandle) {
+      clearTimeout(this.aiFallbackHandle)
+      this.aiFallbackHandle = null
+    }
     if (this.dataChannel) {
       this.dataChannel.close()
       this.dataChannel = null
@@ -268,6 +276,11 @@ class HostInviteMonitor {
     this.statusHandle = null
     this.running = false
     this.activeSession = null
+    this.networkPauseState = {
+      forced: false,
+      wasPausedBeforeForce: false,
+      sessionPeerId: null
+    }
   }
 
   start() {
@@ -368,6 +381,8 @@ class HostInviteMonitor {
   _handleSessionState(session, state) {
     if (state === SESSION_STATES.CONNECTED) {
       this.activeSession = session
+      this._markSessionResponsive(session)
+      setPartyUnresponsiveState(this.partyId, null)
       markPartyControlledByHuman(this.partyId, session.alias)
       showHostNotification(`${session.alias || 'Remote client'} connected to party ${this.partyId}`)
       updateGlobalSession({
@@ -390,41 +405,9 @@ class HostInviteMonitor {
       // Start game state synchronization when a player connects
       startGameStateSync()
     } else if (state === SESSION_STATES.DISCONNECTED || state === SESSION_STATES.FAILED) {
-      const wasActiveSession = this.activeSession === session
-      if (wasActiveSession) {
-        this.activeSession = null
-      }
       releaseRemoteControlSource(session.sourceId)
-
-      // T016: AI fallback on disconnect - flip aiActive to true and emit event
-      const previousAlias = session.alias || 'Remote client'
-      markPartyControlledByAi(this.partyId)
-
-      // Emit AI reactivation event so AI controllers can reinitialize immediately
-      emitAiReactivation(this.partyId)
-
-      // Show re-activation notification per spec requirement
-      showHostNotification(`${previousAlias} disconnected from party ${this.partyId} - AI has resumed control`)
-
+      this._markSessionUnresponsive(session, 'Connection interrupted. Waiting for reconnection...')
       updateGlobalSession({ alias: null, isRemote: false, status: SESSION_STATES.DISCONNECTED })
-      session.dispose()
-      this.sessions.delete(session.peerId)
-
-      // Check if any sessions are still active, if not stop the game state sync
-      const hasActiveSessions = Array.from(this.sessions.values()).some(
-        s => s.connectionState === SESSION_STATES.CONNECTED
-      )
-      if (!hasActiveSessions) {
-        stopGameStateSync()
-        // Disable lockstep mode when all clients disconnect
-        if (isLockstepEnabled()) {
-          disableLockstep()
-          window.logger('[WebRTC] Lockstep mode disabled - no active sessions')
-        }
-      }
-
-      // The invite token remains valid - new players can rejoin immediately
-      // No need to regenerate tokens on disconnect, only on save/load handover
     }
   }
 
@@ -434,6 +417,13 @@ class HostInviteMonitor {
     }
 
     window.logger('[Host WebRTC] Received control message:', payload.type, payload)
+
+    if (payload.type === 'heartbeat-pong') {
+      this._markSessionResponsive(session)
+      return
+    }
+
+    this._markSessionResponsive(session)
 
     // Handle game command synchronization messages
     if (payload.type === 'game-command') {
@@ -451,15 +441,21 @@ class HostInviteMonitor {
 
   _startStatusBroadcast() {
     this.statusHandle = setInterval(() => {
+      this._checkForUnresponsiveSessions()
+      const unresponsiveInfo = this._currentUnresponsiveInfo()
       const running = !gameState.gamePaused
       const payload = {
         type: 'host-status',
         running,
         paused: gameState.gamePaused,
         started: Boolean(gameState.gameStarted),
+        unresponsive: unresponsiveInfo,
         timestamp: Date.now()
       }
-      this.sessions.forEach((session) => session.sendHostStatus(payload))
+      this.sessions.forEach((session) => {
+        session.sendHostStatus(payload)
+        session.sendHostStatus({ type: 'heartbeat-ping', timestamp: Date.now() })
+      })
     }, DEFAULT_HOST_STATUS_INTERVAL_MS)
   }
 
@@ -467,6 +463,132 @@ class HostInviteMonitor {
     if (this.statusHandle) {
       clearInterval(this.statusHandle)
       this.statusHandle = null
+    }
+  }
+
+  _checkForUnresponsiveSessions() {
+    const now = Date.now()
+    this.sessions.forEach((session) => {
+      if (session.connectionState !== SESSION_STATES.CONNECTED) {
+        return
+      }
+      if (now - session.lastResponsiveAt > HEARTBEAT_TIMEOUT_MS) {
+        this._markSessionUnresponsive(session, `${session.alias || 'Remote client'} is not responding. Match paused while reconnecting.`)
+      }
+    })
+  }
+
+  _currentUnresponsiveInfo() {
+    const now = Date.now()
+    const active = Array.from(this.sessions.values())
+      .filter(session => session.unresponsiveSince)
+      .sort((a, b) => a.unresponsiveSince - b.unresponsiveSince)[0]
+
+    if (!active) {
+      return null
+    }
+
+    return {
+      active: true,
+      partyId: this.partyId,
+      alias: active.alias || 'Remote client',
+      since: active.unresponsiveSince,
+      seconds: Math.max(0, Math.floor((now - active.unresponsiveSince) / 1000))
+    }
+  }
+
+  _markSessionUnresponsive(session, notificationMessage) {
+    if (!session.unresponsiveSince) {
+      session.unresponsiveSince = Date.now()
+      setPartyUnresponsiveState(this.partyId, session.unresponsiveSince)
+      showHostNotification(notificationMessage)
+    }
+
+    if (!this.networkPauseState.forced) {
+      this.networkPauseState = {
+        forced: true,
+        wasPausedBeforeForce: Boolean(gameState.gamePaused),
+        sessionPeerId: session.peerId
+      }
+      gameState.gamePaused = true
+    }
+
+    if (!session.aiFallbackHandle) {
+      session.aiFallbackHandle = setTimeout(() => {
+        if (session.unresponsiveSince) {
+          this._finalizeAiTakeover(session, 'did not reconnect in time')
+        }
+      }, _AI_FALLBACK_DELAY_MS)
+    }
+  }
+
+  _markSessionResponsive(session) {
+    session.lastResponsiveAt = Date.now()
+    if (!session.unresponsiveSince) {
+      return
+    }
+
+    session.unresponsiveSince = null
+    setPartyUnresponsiveState(this.partyId, null)
+    if (session.aiFallbackHandle) {
+      clearTimeout(session.aiFallbackHandle)
+      session.aiFallbackHandle = null
+    }
+
+    showHostNotification(`${session.alias || 'Remote client'} reconnected. Match resumed.`)
+    this._releaseNetworkPauseIfResolved()
+  }
+
+  _releaseNetworkPauseIfResolved() {
+    const stillUnresponsive = Array.from(this.sessions.values()).some(session => session.unresponsiveSince)
+    if (stillUnresponsive || !this.networkPauseState.forced) {
+      return
+    }
+
+    const shouldResume = !this.networkPauseState.wasPausedBeforeForce
+    this.networkPauseState = {
+      forced: false,
+      wasPausedBeforeForce: false,
+      sessionPeerId: null
+    }
+
+    if (shouldResume) {
+      gameState.gamePaused = false
+    }
+  }
+
+  _finalizeAiTakeover(session, reason) {
+    releaseRemoteControlSource(session.sourceId)
+    if (this.activeSession === session) {
+      this.activeSession = null
+    }
+
+    const previousAlias = session.alias || 'Remote client'
+    markPartyControlledByAi(this.partyId)
+    emitAiReactivation(this.partyId)
+    showHostNotification(`${previousAlias} ${reason} - AI has resumed control of party ${this.partyId}`)
+
+    session.unresponsiveSince = null
+    setPartyUnresponsiveState(this.partyId, null)
+    if (session.aiFallbackHandle) {
+      clearTimeout(session.aiFallbackHandle)
+      session.aiFallbackHandle = null
+    }
+
+    session.dispose()
+    this.sessions.delete(session.peerId)
+    this._releaseNetworkPauseIfResolved()
+
+    const hasActiveSessions = Array.from(this.sessions.values()).some(
+      s => s.connectionState === SESSION_STATES.CONNECTED
+    )
+
+    if (!hasActiveSessions) {
+      stopGameStateSync()
+      if (isLockstepEnabled()) {
+        disableLockstep()
+        window.logger('[WebRTC] Lockstep mode disabled - no active sessions')
+      }
     }
   }
 }

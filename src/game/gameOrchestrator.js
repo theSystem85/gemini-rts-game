@@ -18,7 +18,7 @@ import {
   setMapDimensions
 } from '../config.js'
 import { initSettingsModal, openSettingsModal } from '../ui/settingsModal.js'
-import { initSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
+import { initSidebarMultiplayer, refreshSidebarMultiplayer } from '../ui/sidebarMultiplayer.js'
 import { initAiPartySync } from '../network/aiPartySync.js'
 import { setProductionControllerRef } from '../network/gameCommandSync.js'
 import { initFactories } from '../factories.js'
@@ -66,11 +66,65 @@ function sanitizeMapDimension(value, fallback) {
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
 }
 
+function parseStartupMapOverrides() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const params = new URLSearchParams(window.location.search || '')
+  const rawSeed = params.get('seed')
+  const rawSize = params.get('size') || params.get('mapSize')
+  const rawWidth = params.get('width') || params.get('mapWidth')
+  const rawHeight = params.get('height') || params.get('mapHeight')
+  const rawPlayers = params.get('players') || params.get('playerCount')
+
+  const hasAnyOverride = rawSeed !== null || rawSize !== null || rawWidth !== null || rawHeight !== null || rawPlayers !== null
+  if (!hasAnyOverride) {
+    return null
+  }
+
+  let width = null
+  let height = null
+  if (rawSize !== null) {
+    const size = sanitizeMapDimension(rawSize, DEFAULT_MAP_TILES_X)
+    width = size
+    height = size
+  }
+
+  if (rawWidth !== null) {
+    width = sanitizeMapDimension(rawWidth, width ?? DEFAULT_MAP_TILES_X)
+  }
+
+  if (rawHeight !== null) {
+    height = sanitizeMapDimension(rawHeight, height ?? DEFAULT_MAP_TILES_Y)
+  }
+
+  let playerCount = null
+  if (rawPlayers !== null) {
+    const parsedPlayers = parseInt(rawPlayers, 10)
+    if (Number.isFinite(parsedPlayers) && parsedPlayers >= 2 && parsedPlayers <= 4) {
+      playerCount = parsedPlayers
+    }
+  }
+
+  return {
+    seed: rawSeed !== null ? resolveMapSeed(rawSeed) : null,
+    width,
+    height,
+    playerCount
+  }
+}
+
+const startupMapOverrides = parseStartupMapOverrides()
+
 function loadPersistedSettings() {
+  const mapOverrides = startupMapOverrides
   try {
     const seedInput = document.getElementById('mapSeed')
     const storedSeed = localStorage.getItem(MAP_SEED_STORAGE_KEY)
-    if (seedInput && storedSeed !== null) {
+    if (seedInput && mapOverrides?.seed) {
+      seedInput.value = mapOverrides.seed
+    } else if (seedInput && storedSeed !== null) {
       seedInput.value = storedSeed
     }
   } catch (e) {
@@ -107,26 +161,45 @@ function loadPersistedSettings() {
     heightInput.value = heightTiles
   }
 
+  if (mapOverrides?.width !== null && mapOverrides?.width !== undefined) {
+    widthTiles = mapOverrides.width
+    if (widthInput) {
+      widthInput.value = widthTiles
+    }
+  }
+
+  if (mapOverrides?.height !== null && mapOverrides?.height !== undefined) {
+    heightTiles = mapOverrides.height
+    if (heightInput) {
+      heightInput.value = heightTiles
+    }
+  }
+
   const { width, height } = setMapDimensions(widthTiles, heightTiles)
   gameState.mapTilesX = width
   gameState.mapTilesY = height
 
-  try {
-    localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
-  } catch (e) {
-    window.logger.warn('Failed to save map width to localStorage:', e)
-  }
+  if (!mapOverrides?.width && !mapOverrides?.height) {
+    try {
+      localStorage.setItem(MAP_WIDTH_TILES_STORAGE_KEY, width.toString())
+    } catch (e) {
+      window.logger.warn('Failed to save map width to localStorage:', e)
+    }
 
-  try {
-    localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
-  } catch (e) {
-    window.logger.warn('Failed to save map height to localStorage:', e)
+    try {
+      localStorage.setItem(MAP_HEIGHT_TILES_STORAGE_KEY, height.toString())
+    } catch (e) {
+      window.logger.warn('Failed to save map height to localStorage:', e)
+    }
   }
 
   try {
     const playerInput = document.getElementById('playerCount')
     const storedCount = localStorage.getItem(PLAYER_COUNT_STORAGE_KEY)
-    if (playerInput && storedCount !== null) {
+    if (playerInput && mapOverrides?.playerCount) {
+      playerInput.value = mapOverrides.playerCount
+      gameState.playerCount = mapOverrides.playerCount
+    } else if (playerInput && storedCount !== null) {
       const parsed = parseInt(storedCount)
       if (!isNaN(parsed) && parsed >= 2 && parsed <= 4) {
         playerInput.value = parsed
@@ -218,15 +291,28 @@ class Game {
     deactivateMapEditMode()
     gameState.gameStarted = true
 
-    // Check for seed in URL params first, then fall back to input field
-    const urlParams = new URLSearchParams(window.location.search)
-    const urlSeed = urlParams.get('seed')
+    const mapOverrides = startupMapOverrides
     const seedInput = document.getElementById('mapSeed')
-    const seed = resolveMapSeed(urlSeed || (seedInput ? seedInput.value : '1'))
+    const seed = resolveMapSeed(mapOverrides?.seed || (seedInput ? seedInput.value : gameState.mapSeed || '1'))
 
-    // Update input field to reflect the seed being used
-    if (seedInput && urlSeed) {
+    if (seedInput && mapOverrides?.seed) {
       seedInput.value = seed
+    }
+
+    if (mapOverrides?.width || mapOverrides?.height) {
+      const resolvedWidth = mapOverrides?.width || gameState.mapTilesX || MAP_TILES_X
+      const resolvedHeight = mapOverrides?.height || gameState.mapTilesY || MAP_TILES_Y
+      setMapDimensions(resolvedWidth, resolvedHeight)
+      gameState.mapTilesX = resolvedWidth
+      gameState.mapTilesY = resolvedHeight
+    }
+
+    if (mapOverrides?.playerCount) {
+      gameState.playerCount = mapOverrides.playerCount
+      const playerCountInput = document.getElementById('playerCount')
+      if (playerCountInput) {
+        playerCountInput.value = mapOverrides.playerCount
+      }
     }
 
     gameState.mapSeed = seed
@@ -396,6 +482,7 @@ class Game {
           } catch (err) {
             window.logger.warn('Failed to save player count to localStorage:', err)
           }
+          refreshSidebarMultiplayer()
         } else {
           e.target.value = gameState.playerCount || 2
         }

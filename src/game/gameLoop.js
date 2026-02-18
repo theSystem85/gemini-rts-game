@@ -127,6 +127,8 @@ export class GameLoop {
   handlePausedFrame(now, gameCtx, gameCanvas, pauseStateChanged) {
     this.lastFrameTime = null
 
+    updateGame(0, this.mapGrid, this.factories, this.units, this.bullets, gameState)
+
     const gameGl = this.canvasManager.getGameGlContext()
     const gameGlCanvas = this.canvasManager.getGameGlCanvas()
 

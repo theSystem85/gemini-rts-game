@@ -118,6 +118,20 @@ export class AttackGroupHandler {
       }
     }
 
+    if (gameState.factories) {
+      for (const factory of gameState.factories) {
+        if (!isHumanPlayerTarget(factory) && factory.health > 0) {
+          const factoryCenterX = (factory.x + factory.width / 2) * TILE_SIZE
+          const factoryCenterY = (factory.y + factory.height / 2) * TILE_SIZE
+
+          if (factoryCenterX >= x1 && factoryCenterX <= x2 &&
+              factoryCenterY >= y1 && factoryCenterY <= y2) {
+            enemyTargets.push(factory)
+          }
+        }
+      }
+    }
+
     return enemyTargets
   }
 
