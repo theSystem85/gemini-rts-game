@@ -9,4 +9,7 @@ Enable desktop-only edge-triggered camera scrolling that activates after the cur
 - **Speed scaling:** Scroll speed scales up as the cursor moves closer to the edge; no scaling effect occurs outside the 5% zone.
 - **Config editor:** Expose base auto-scroll speed in the runtime config editor so it can be tuned live.
 - **Settings toggle:** Provide a checkbox in Settings that enables/disables desktop edge auto-scroll.
+- **Default state:** Desktop edge auto-scroll is disabled by default until explicitly enabled in Settings.
 - **Desktop-only:** Do not enable this behavior in touch/mobile layouts.
+
+- **Cursor leave guard:** Auto-scroll must stop immediately when the cursor is no longer over the map canvas (including tooltip/sidebar interactions).

@@ -1,3 +1,4 @@
+- [x] Disable desktop edge auto-scroll by default, stop edge scrolling immediately when cursor leaves the map canvas, and set HUD mode 4 (modern donut) as the default selected-unit HUD mode.
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
 - [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.
 - [x] README follow-up: add section icons and document `netlify dev` as an optional local multiplayer test path when Netlify CLI is installed globally.
