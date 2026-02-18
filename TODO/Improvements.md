@@ -1,4 +1,7 @@
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
+- [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.
+- [x] README follow-up: add section icons and document `netlify dev` as an optional local multiplayer test path when Netlify CLI is installed globally.
+- [x] Add desktop + mobile screenshots to README, converting docs images to WebP (quality 85) and removing the original PNGs.
 - [x] Add a proper standard MIT license to the project (`LICENSE`), add `license: MIT` in package metadata, and mention license in README.
 - [x] HUD mode 4 (donut) polish: remove yellow selection box, make donut bars 2px thinner, and raise XP stars to avoid overlap with the top HUD arc.
 - [x] Add a selected-tank HUD preview inside Settings next to the HUD style selector, and add a persistent HUD bar-thickness input (default 3px) restored from localStorage on load.
