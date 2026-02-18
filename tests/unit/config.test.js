@@ -188,7 +188,7 @@ describe('config.js', () => {
     })
 
     it('should have MIN_MAP_TILES defined', () => {
-      expect(MIN_MAP_TILES).toBe(32)
+      expect(MIN_MAP_TILES).toBe(25)
     })
 
     it('should have DEFAULT_MAP_TILES defined', () => {

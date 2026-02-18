@@ -59,7 +59,8 @@ vi.mock('../../src/behaviours/guard.js', () => ({
 }))
 
 vi.mock('../../src/main.js', () => ({
-  units: []
+  units: [],
+  buildingCosts: {}
 }))
 
 vi.mock('../../src/game/spatialQuadtree.js', () => ({
@@ -200,7 +201,8 @@ vi.mock('../../src/game/dangerZoneMap.js', () => ({
 }))
 
 vi.mock('../../src/units.js', () => ({
-  spawnUnit: vi.fn()
+  spawnUnit: vi.fn(),
+  unitCosts: {}
 }))
 
 describe('updateGame.js', () => {
