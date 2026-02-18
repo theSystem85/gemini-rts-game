@@ -490,6 +490,29 @@ body.config-modal-open {
   background: rgba(0, 0, 0, 0.2);
 }
 
+.config-modal__subsection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.config-modal__subsection-summary .config-modal__section-title {
+  margin: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.config-modal__subsection--locked .config-modal__hint {
+  color: #ffcc66;
+  font-weight: 600;
+}
+
+.config-modal__locked-content {
+  margin-top: 12px;
+}
+
 .config-modal__subsection .config-modal__section-title {
   font-size: 13px;
   margin: 0 0 12px;

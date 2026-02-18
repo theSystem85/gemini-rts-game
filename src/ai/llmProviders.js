@@ -1,6 +1,5 @@
 import { getProviderSettings } from './llmSettings.js'
 
-const REMOTE_COSTS_URL = 'https://raw.githubusercontent.com/codeforbattle/llm-costs/main/llm-costs.json'
 const LOCAL_COSTS_URL = '/data/llm-costs.json'
 
 // Custom error class for quota exceeded errors
@@ -44,7 +43,7 @@ export async function fetchCostMap() {
   if (costFetchInFlight) return costFetchInFlight
 
   costFetchInFlight = (async() => {
-    const urls = [REMOTE_COSTS_URL, LOCAL_COSTS_URL].filter(Boolean)
+    const urls = [LOCAL_COSTS_URL].filter(Boolean)
     for (const url of urls) {
       try {
         const response = await fetch(url, { cache: 'no-store' })

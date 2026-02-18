@@ -33,9 +33,10 @@ Introduce configurable LLM support for enemy strategic planning and optional ene
 - Anthropic: `GET /v1/models`, `POST /v1/messages`
 - xAI: `GET /v1/models`, `POST /v1/chat/completions`
 - Ollama: `GET /api/tags`, `POST /api/chat`
+- Temporary UI lock (2026-02-18): only OpenAI is selectable in game settings; other provider sections remain visible but collapsed with a "coming soon!" hint.
 
 ## Cost Tracking
-- Costs fetched from a remote JSON file when available, with a local fallback (`public/data/llm-costs.json`).
+- Costs fetched from local JSON only (`public/data/llm-costs.json`) because the remote source URL is currently unavailable.
 - Usage tallies:
   - Total tokens + cost per session
   - Per provider/model breakdown

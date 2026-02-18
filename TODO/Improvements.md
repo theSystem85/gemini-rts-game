@@ -1,4 +1,5 @@
 ## Improvements
+- [x] Temporarily lock LLM settings to OpenAI only: remove invalid remote cost URL usage, keep other provider sections visible but collapsed, and show a "coming soon!" hint for Anthropic/xAI/Ollama.
 - [x] Rename all in-repo and in-game title variants to Code for Battle.
 - [x] Change extended multiplayer full-assault win condition to complete when all BLUE structures are destroyed (buildings + factories, excluding walls), without waiting for total BLUE unit elimination or victory screen flow.
 - [x] Replace flaky UI-mouse AGF in extended multiplayer E2E with deterministic programmatic AGF-equivalent engine commands (selected combat units + attack queue + attackGroupTargets) so all BLUE structure targets remain visibly highlighted during selection.
