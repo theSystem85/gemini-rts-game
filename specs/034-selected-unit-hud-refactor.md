@@ -39,4 +39,6 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 10. Persist the selected HUD style in local storage and apply it on load.
 11. Add a fourth HUD mode featuring four quarter-donut status arcs (3px thickness) around the selected unit, with crew symbols centered on top/right/bottom/left edges and at least 3px gap before adjacent arcs begin.
 12. Refine mode 3 so crew symbols are centered on each rectangle corner centerpoint and refine mode 2 bar alignment so bars are centered on the yellow outline.
+13. Render a live selected-tank HUD preview directly in the Settings modal to the right of the HUD style selector.
+14. Add a HUD bar thickness number input in Settings with default **3px**, and persist/restore this value through local storage on startup.
 

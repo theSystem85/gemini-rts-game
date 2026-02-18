@@ -58,6 +58,7 @@ export const MAP_HEIGHT_TILES_STORAGE_KEY = 'rts-map-height-tiles'
 const SHADOW_OF_WAR_STORAGE_KEY = 'rts-shadow-of-war-enabled'
 const DESKTOP_EDGE_AUTOSCROLL_STORAGE_KEY = 'rts-desktop-edge-autoscroll-enabled'
 const SELECTION_HUD_MODE_STORAGE_KEY = 'rts-selection-hud-mode'
+const SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY = 'rts-selection-hud-bar-thickness'
 
 function sanitizeMapDimension(value, fallback) {
   const parsed = parseInt(value, 10)
@@ -65,6 +66,16 @@ function sanitizeMapDimension(value, fallback) {
     return Math.max(MIN_MAP_TILES, parsed)
   }
   return Math.max(MIN_MAP_TILES, Number.isFinite(fallback) ? Math.floor(fallback) : MIN_MAP_TILES)
+}
+
+function sanitizeSelectionHudBarThickness(value, fallback = 3) {
+  const parsed = parseInt(value, 10)
+  if (Number.isFinite(parsed)) {
+    return Math.max(1, Math.min(8, parsed))
+  }
+
+  const safeFallback = Number.isFinite(fallback) ? Math.floor(fallback) : 3
+  return Math.max(1, Math.min(8, safeFallback))
 }
 
 function parseStartupMapOverrides() {
@@ -238,6 +249,15 @@ function loadPersistedSettings() {
     }
   } catch (e) {
     window.logger.warn('Failed to load selection HUD mode from localStorage:', e)
+  }
+
+  try {
+    const storedSelectionHudBarThickness = localStorage.getItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY)
+    if (storedSelectionHudBarThickness !== null) {
+      gameState.selectionHudBarThickness = sanitizeSelectionHudBarThickness(storedSelectionHudBarThickness, gameState.selectionHudBarThickness)
+    }
+  } catch (e) {
+    window.logger.warn('Failed to load selection HUD bar thickness from localStorage:', e)
   }
 }
 
@@ -578,9 +598,170 @@ class Game {
     const shadowCheckbox = document.getElementById('shadowOfWarCheckbox')
     const edgeAutoscrollCheckbox = document.getElementById('desktopEdgeAutoscrollToggle')
     const selectionHudModeSelect = document.getElementById('selectionHudModeSelect')
+    const selectionHudBarThicknessInput = document.getElementById('selectionHudBarThicknessInput')
+    const selectionHudPreviewCanvas = document.getElementById('selectionHudPreviewCanvas')
     const versionElement = document.getElementById('appVersion')
     const commitMessageElement = document.getElementById('appCommitMessage')
     const cheatMenuBtn = document.getElementById('cheatMenuBtn')
+
+    const renderSelectionHudPreview = () => {
+      if (!selectionHudPreviewCanvas) return
+
+      const ctx = selectionHudPreviewCanvas.getContext('2d')
+      if (!ctx) return
+
+      const mode = selectionHudModeSelect?.value || gameState.selectionHudMode || 'modern'
+      const barThickness = sanitizeSelectionHudBarThickness(
+        selectionHudBarThicknessInput?.value,
+        gameState.selectionHudBarThickness
+      )
+      const donutThickness = Math.max(1, barThickness - 2)
+
+      const canvasWidth = selectionHudPreviewCanvas.width
+      const canvasHeight = selectionHudPreviewCanvas.height
+      const centerX = Math.floor(canvasWidth / 2)
+      const centerY = Math.floor(canvasHeight / 2)
+      const halfHud = 22
+      const hudBounds = {
+        left: centerX - halfHud,
+        right: centerX + halfHud,
+        top: centerY - halfHud,
+        bottom: centerY + halfHud,
+        width: halfHud * 2,
+        height: halfHud * 2
+      }
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+      ctx.fillStyle = '#0F131A'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      if (mode !== 'modern-no-border' && mode !== 'modern-donut') {
+        ctx.strokeStyle = '#FF0'
+        ctx.lineWidth = 1
+        ctx.strokeRect(hudBounds.left, hudBounds.top, hudBounds.width, hudBounds.height)
+      }
+
+      const drawRectBar = (edge, ratio, color) => {
+        const barSpan = TILE_SIZE * 0.75
+        ctx.fillStyle = '#3A3A3A'
+        if (edge === 'top' || edge === 'bottom') {
+          const y = edge === 'top'
+            ? hudBounds.top - (barThickness / 2)
+            : hudBounds.bottom - (barThickness / 2)
+          const barX = ((hudBounds.left + hudBounds.right) / 2) - (barSpan / 2)
+          ctx.fillRect(barX, y, barSpan, barThickness)
+          ctx.fillStyle = color
+          ctx.fillRect(barX, y, barSpan * ratio, barThickness)
+          return
+        }
+
+        const x = edge === 'left'
+          ? hudBounds.left - (barThickness / 2)
+          : hudBounds.right - (barThickness / 2)
+        const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
+        ctx.fillRect(x, barY, barThickness, barSpan)
+        const fillHeight = barSpan * ratio
+        ctx.fillStyle = color
+        ctx.fillRect(x, barY + barSpan - fillHeight, barThickness, fillHeight)
+      }
+
+      const drawDonutBar = (edge, ratio, color) => {
+        const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+        const crewSize = 5
+        const crewGap = 3
+        const crewHalfSpanAngle = ((crewSize / 2) + crewGap) / donutRadius
+        const arcRanges = {
+          left: [Math.PI + crewHalfSpanAngle, (Math.PI * 1.5) - crewHalfSpanAngle],
+          top: [(Math.PI * 1.5) + crewHalfSpanAngle, (Math.PI * 2) - crewHalfSpanAngle],
+          right: [crewHalfSpanAngle, (Math.PI / 2) - crewHalfSpanAngle],
+          bottom: [(Math.PI / 2) + crewHalfSpanAngle, Math.PI - crewHalfSpanAngle]
+        }
+        const selectedArc = arcRanges[edge]
+        if (!selectedArc) return
+
+        const [startAngle, endAngle] = selectedArc
+        const sweep = endAngle - startAngle
+
+        ctx.save()
+        ctx.lineCap = 'round'
+        ctx.lineWidth = donutThickness
+        ctx.strokeStyle = '#3A3A3A'
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, donutRadius, startAngle, endAngle)
+        ctx.stroke()
+
+        if (ratio > 0) {
+          ctx.strokeStyle = color
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, donutRadius, startAngle, startAngle + (sweep * ratio))
+          ctx.stroke()
+        }
+        ctx.restore()
+      }
+
+      const drawBar = mode === 'modern-donut' ? drawDonutBar : drawRectBar
+      drawBar('top', 0.65, '#67C23A')
+      drawBar('right', 0.55, '#4A90E2')
+      drawBar('left', 0.7, '#FFA500')
+      drawBar('bottom', 0.5, '#B084F5')
+
+      ctx.fillStyle = '#5B6D7D'
+      ctx.fillRect(centerX - 12, centerY - 9, 24, 18)
+      ctx.fillStyle = '#33414D'
+      ctx.fillRect(centerX - 7, centerY - 13, 14, 8)
+      ctx.fillStyle = '#97A6B3'
+      ctx.fillRect(centerX - 2, centerY - 20, 4, 8)
+
+      const crewMarkers = [
+        { x: centerX, y: centerY - 24, c: '#006400', t: 'C' },
+        { x: centerX + 24, y: centerY, c: '#F00', t: 'G' },
+        { x: centerX, y: centerY + 24, c: '#FFA500', t: 'L' },
+        { x: centerX - 24, y: centerY, c: '#00F', t: 'D' }
+      ]
+
+      ctx.save()
+      ctx.font = '4px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      crewMarkers.forEach(marker => {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+        ctx.fillRect(marker.x - 4, marker.y - 5, 8, 8)
+        ctx.fillStyle = marker.c
+        ctx.fillRect(marker.x - 3, marker.y - 4, 6, 6)
+        ctx.fillStyle = '#FFF'
+        ctx.fillText(marker.t, marker.x, marker.y - 1)
+      })
+      ctx.restore()
+
+      const starY = mode === 'modern-donut' ? hudBounds.top - 8 : hudBounds.top - 3
+      const starSize = 6
+      const starSpacing = 8
+      const stars = 2
+      const totalWidth = (stars * starSpacing) - (starSpacing - starSize)
+      const startX = centerX - totalWidth / 2
+      ctx.fillStyle = '#FFD700'
+      ctx.strokeStyle = '#FFA500'
+      ctx.lineWidth = 1
+      for (let i = 0; i < stars; i++) {
+        const starX = startX + (i * starSpacing)
+        ctx.beginPath()
+        for (let j = 0; j < 5; j++) {
+          const angle = (j * 4 * Math.PI) / 5 - Math.PI / 2
+          const outerRadius = starSize / 2
+          const innerRadius = starSize / 4
+          if (j === 0) {
+            ctx.moveTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
+          } else {
+            ctx.lineTo(starX + outerRadius * Math.cos(angle), starY + outerRadius * Math.sin(angle))
+          }
+          const innerAngle = angle + (2 * Math.PI) / 10
+          ctx.lineTo(starX + innerRadius * Math.cos(innerAngle), starY + innerRadius * Math.sin(innerAngle))
+        }
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+      }
+    }
 
     if (mapSettingsToggle && mapSettingsContent && mapSettingsToggleIcon) {
       mapSettingsToggle.addEventListener('click', () => {
@@ -637,6 +818,12 @@ class Game {
       selectionHudModeSelect.value = gameState.selectionHudMode || 'modern'
     }
 
+    if (selectionHudBarThicknessInput) {
+      selectionHudBarThicknessInput.value = sanitizeSelectionHudBarThickness(gameState.selectionHudBarThickness, 3)
+    }
+
+    renderSelectionHudPreview()
+
     const showEnemyResourcesCheckbox = document.getElementById('showEnemyResourcesCheckbox')
     if (showEnemyResourcesCheckbox) {
       showEnemyResourcesCheckbox.checked = !!gameState.showEnemyResources
@@ -692,7 +879,28 @@ class Game {
         } catch (err) {
           window.logger.warn('Failed to save selection HUD mode to localStorage:', err)
         }
+        renderSelectionHudPreview()
       })
+    }
+
+    if (selectionHudBarThicknessInput) {
+      const applyHudBarThickness = () => {
+        const nextThickness = sanitizeSelectionHudBarThickness(
+          selectionHudBarThicknessInput.value,
+          gameState.selectionHudBarThickness
+        )
+        selectionHudBarThicknessInput.value = nextThickness
+        gameState.selectionHudBarThickness = nextThickness
+        try {
+          localStorage.setItem(SELECTION_HUD_BAR_THICKNESS_STORAGE_KEY, nextThickness.toString())
+        } catch (err) {
+          window.logger.warn('Failed to save selection HUD bar thickness to localStorage:', err)
+        }
+        renderSelectionHudPreview()
+      }
+
+      selectionHudBarThicknessInput.addEventListener('input', applyHudBarThickness)
+      selectionHudBarThicknessInput.addEventListener('change', applyHudBarThickness)
     }
 
     if (cheatMenuBtn) {

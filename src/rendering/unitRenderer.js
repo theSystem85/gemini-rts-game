@@ -264,7 +264,7 @@ export class UnitRenderer {
 
   drawHudEdgeBar(ctx, hudBounds, edge, ratio, color) {
     const clampedRatio = Math.max(0, Math.min(1, ratio))
-    const barThickness = 3
+    const barThickness = this.getSelectionHudBarThickness()
     const barSpan = TILE_SIZE * 0.75
 
     if (this.isDonutSelectionHud()) {
@@ -339,6 +339,14 @@ export class UnitRenderer {
 
   getSelectionHudMode() {
     return gameState.selectionHudMode || 'modern'
+  }
+
+  getSelectionHudBarThickness() {
+    const parsed = parseInt(gameState.selectionHudBarThickness, 10)
+    if (!Number.isFinite(parsed)) {
+      return 3
+    }
+    return Math.max(1, Math.min(8, parsed))
   }
 
   isLegacySelectionHud() {
@@ -515,7 +523,7 @@ export class UnitRenderer {
       const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
 
       const progressBarWidth = TILE_SIZE * 0.8
-      const progressBarHeight = 3
+      const progressBarHeight = unit.selected ? this.getSelectionHudBarThickness() : 3
       const progressBarX = unit.x + TILE_SIZE / 2 - scrollOffset.x - progressBarWidth / 2
       const progressBarY = unit.y - 5 - scrollOffset.y - altitudeLift
 
@@ -553,7 +561,7 @@ export class UnitRenderer {
       const top = centerY - halfTile - offset
       const bottom = centerY + halfTile + offset
 
-      const barWidth = 3
+      const barWidth = this.getSelectionHudBarThickness()
       const barHeight = bottom - top - cornerSize * 2
       const barX = right - barWidth - 1
       const barTop = top + cornerSize
@@ -643,7 +651,7 @@ export class UnitRenderer {
       const top = centerY - halfTile - offset
       const bottom = centerY + halfTile + offset
 
-      const barWidth = 3
+      const barWidth = this.getSelectionHudBarThickness()
       const barHeight = bottom - top - cornerSize * 2
       const barX = left + 1
       const barTop = top + cornerSize
@@ -675,15 +683,16 @@ export class UnitRenderer {
 
     // Draw reload indicator overlay for rocket tanks (light blue 1px line)
     if (reloadRatio !== null && !this.isDonutSelectionHud()) {
+      const barThickness = this.getSelectionHudBarThickness()
       const barSpan = TILE_SIZE * 0.75
       const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
-      const barX = hudBounds.left - (3 / 2)
+      const barX = hudBounds.left - (barThickness / 2)
       const reloadLineY = barY + barSpan - (barSpan * reloadRatio)
       ctx.strokeStyle = '#87CEEB' // Light blue
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(barX, reloadLineY)
-      ctx.lineTo(barX + 3, reloadLineY)
+      ctx.lineTo(barX + barThickness, reloadLineY)
       ctx.stroke()
     }
   }
