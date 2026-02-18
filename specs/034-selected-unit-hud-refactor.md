@@ -27,6 +27,9 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 ## Follow-up adjustments
 7. Each edge bar span (horizontal/vertical) must be capped at **75% of one tile** so the selection outline remains visible around bar endpoints.
 8. Crew indicators must be **centered horizontally** beneath the bottom status bar.
+9. In HUD mode 4 (**modern donut**), the yellow selection rectangle must be hidden.
+10. In HUD mode 4 (**modern donut**), donut arc thickness must be reduced by **2px** from the previous rendering width.
+11. XP stars must be shifted upward enough to avoid overlapping the top HUD indicator in donut mode.
 
 ## Settings integration
 9. Add a Settings modal dropdown allowing users to switch selected-unit HUD rendering mode with options:

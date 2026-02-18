@@ -189,6 +189,10 @@ export class UnitRenderer {
         return
       }
 
+      if (this.isDonutSelectionHud()) {
+        return
+      }
+
       if (this.getSelectionHudMode() === 'legacy') {
         ctx.strokeStyle = '#FF0'
         ctx.lineWidth = 1
@@ -264,6 +268,7 @@ export class UnitRenderer {
     const barSpan = TILE_SIZE * 0.75
 
     if (this.isDonutSelectionHud()) {
+      const donutBarThickness = Math.max(1, barThickness - 2)
       const centerX = (hudBounds.left + hudBounds.right) / 2
       const centerY = (hudBounds.top + hudBounds.bottom) / 2
       const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
@@ -286,7 +291,7 @@ export class UnitRenderer {
 
       ctx.save()
       ctx.lineCap = 'round'
-      ctx.lineWidth = barThickness
+      ctx.lineWidth = donutBarThickness
       ctx.strokeStyle = '#3A3A3A'
       ctx.beginPath()
       ctx.arc(centerX, centerY, donutRadius, startAngle, endAngle)
@@ -1037,7 +1042,9 @@ export class UnitRenderer {
     const startX = centerX - totalWidth / 2
     const starY = this.isLegacySelectionHud()
       ? unit.y - 20 - scrollOffset.y
-      : hudBounds.top - 3
+      : this.isDonutSelectionHud()
+        ? hudBounds.top - 8
+        : hudBounds.top - 3
     ctx.save()
     ctx.fillStyle = '#FFD700' // Gold color for stars
     ctx.strokeStyle = '#FFA500' // Orange outline
