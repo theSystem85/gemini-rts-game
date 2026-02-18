@@ -14,6 +14,9 @@ import { initiateRetreat } from '../behaviours/retreat.js'
 import * as mineInput from './mineInputHandler.js'
 import { isWithinBaseRange } from '../utils/baseUtils.js'
 import {
+  findActiveFriendlyBuildingAtTile,
+  isTileWithinBuilding,
+  isUnitAtTile,
   isRallyPointTileBlocked,
   shouldStartUtilityQueueMode,
   isOverRecoveryTankAt,
@@ -158,19 +161,17 @@ export function handleLeftMouseDown(handler, e, worldX, worldY, gameCanvas, sele
     u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
   )
   if (needsGas && gameState.buildings && Array.isArray(gameState.buildings)) {
-    for (const building of gameState.buildings) {
-      if (
-        building.type === 'gasStation' &&
-        building.owner === gameState.humanPlayer &&
-        building.health > 0 &&
-        tileX >= building.x && tileX < building.x + building.width &&
-        tileY >= building.y && tileY < building.y + building.height
-      ) {
-        handler.isSelecting = false
-        gameState.selectionActive = false
-        gameState.disableAGFRendering = true
-        break
-      }
+    const gasStationTarget = findActiveFriendlyBuildingAtTile(
+      gameState.buildings,
+      tileX,
+      tileY,
+      gameState.humanPlayer,
+      'gasStation'
+    )
+    if (gasStationTarget) {
+      handler.isSelecting = false
+      gameState.selectionActive = false
+      gameState.disableAGFRendering = true
     }
   }
 }
@@ -708,43 +709,39 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
       const tileX = Math.floor(worldX / TILE_SIZE)
       const tileY = Math.floor(worldY / TILE_SIZE)
 
-      if (gameState.buildings && Array.isArray(gameState.buildings)) {
-        for (const building of gameState.buildings) {
-          if (building.type === 'oreRefinery' &&
-              building.owner === gameState.humanPlayer &&
-              building.health > 0 &&
-              tileX >= building.x && tileX < building.x + building.width &&
-              tileY >= building.y && tileY < building.y + building.height) {
-            unitCommands.handleRefineryUnloadCommand(commandableUnits, building, mapGrid)
-            return
-          }
-        }
+      const refineryTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'oreRefinery'
+      )
+      if (refineryTarget) {
+        unitCommands.handleRefineryUnloadCommand(commandableUnits, refineryTarget, mapGrid)
+        return
       }
     }
 
     const tileX = Math.floor(worldX / TILE_SIZE)
     const tileY = Math.floor(worldY / TILE_SIZE)
 
-    if (gameState.buildings && Array.isArray(gameState.buildings)) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'vehicleWorkshop' &&
-            building.owner === gameState.humanPlayer &&
-            building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          unitCommands.handleRepairWorkshopCommand(commandableUnits, building, mapGrid)
-          return
-        }
-      }
+    const workshopTarget = findActiveFriendlyBuildingAtTile(
+      gameState.buildings,
+      tileX,
+      tileY,
+      gameState.humanPlayer,
+      'vehicleWorkshop'
+    )
+    if (workshopTarget) {
+      unitCommands.handleRepairWorkshopCommand(commandableUnits, workshopTarget, mapGrid)
+      return
     }
 
     const hasSelectedTankers = commandableUnits.some(unit => unit.type === 'tankerTruck')
     if (hasSelectedTankers) {
       for (const unit of units) {
         if (unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number') {
-          const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-          if (uX === tileX && uY === tileY && unit.gas < unit.maxGas) {
+          if (isUnitAtTile(unit, tileX, tileY) && unit.gas < unit.maxGas) {
             unitCommands.handleTankerRefuelCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
             return
           }
@@ -756,9 +753,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
     if (hasSelectedAmmoTrucks) {
       for (const unit of units) {
         if (unit.owner === gameState.humanPlayer && typeof unit.maxAmmunition === 'number') {
-          const uX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const uY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-          if (uX === tileX && uY === tileY && unit.ammunition < unit.maxAmmunition) {
+          if (isUnitAtTile(unit, tileX, tileY) && unit.ammunition < unit.maxAmmunition) {
             unitCommands.handleAmmunitionTruckResupplyCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
             return
           }
@@ -770,8 +765,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
             continue
           }
 
-          const withinFootprint = tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height
+          const withinFootprint = isTileWithinBuilding(tileX, tileY, building)
           if (!withinFootprint) {
             continue
           }
@@ -795,10 +789,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
       for (const unit of units) {
         if (unit.owner === gameState.humanPlayer &&
             unit.crew && typeof unit.crew === 'object') {
-          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-          if (unitTileX === tileX && unitTileY === tileY) {
+          if (isUnitAtTile(unit, tileX, tileY)) {
             const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
             if (missingCrew.length > 0) {
               unitCommands.handleAmbulanceHealCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
@@ -826,10 +817,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
         if (unit.owner === gameState.humanPlayer &&
             unit.type !== 'recoveryTank' &&
             unit.health < unit.maxHealth) {
-          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-          if (unitTileX === tileX && unitTileY === tileY) {
+          if (isUnitAtTile(unit, tileX, tileY)) {
             unitCommands.handleRecoveryTankRepairCommand(commandableUnits, unit, mapGrid, { append: appendToUtilityQueue })
             return
           }
@@ -842,10 +830,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
     if (hasSelectedDamagedUnits) {
       for (const unit of units) {
         if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
-          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-          if (unitTileX === tileX && unitTileY === tileY) {
+          if (isUnitAtTile(unit, tileX, tileY)) {
             unitCommands.handleDamagedUnitToRecoveryTankCommand(commandableUnits, unit, mapGrid)
             return
           }
@@ -857,9 +842,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
     if (hasSelectedRecovery) {
       for (const unit of units) {
         if (unit.owner === gameState.humanPlayer) {
-          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-          if (unitTileX === tileX && unitTileY === tileY) {
+          if (isUnitAtTile(unit, tileX, tileY)) {
             if (unit.crew && (!unit.crew.driver || !unit.crew.commander)) {
               unitCommands.handleRecoveryTowCommand(commandableUnits, unit)
               return
@@ -872,15 +855,16 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
     const hasSelectedNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
 
     if (hasSelectedNotFullyLoadedAmbulances) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'hospital' &&
-            building.owner === gameState.humanPlayer &&
-            building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          unitCommands.handleAmbulanceRefillCommand(commandableUnits, building, mapGrid)
-          return
-        }
+      const hospitalTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'hospital'
+      )
+      if (hospitalTarget) {
+        unitCommands.handleAmbulanceRefillCommand(commandableUnits, hospitalTarget, mapGrid)
+        return
       }
     }
 
@@ -888,15 +872,16 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
       u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
     )
     if (needsGas) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'gasStation' &&
-            building.owner === gameState.humanPlayer &&
-            building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          unitCommands.handleGasStationRefillCommand(commandableUnits, building, mapGrid)
-          return
-        }
+      const gasStationTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'gasStation'
+      )
+      if (gasStationTarget) {
+        unitCommands.handleGasStationRefillCommand(commandableUnits, gasStationTarget, mapGrid)
+        return
       }
     }
 
@@ -905,15 +890,16 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
       commandableUnits.every(unit => unit.type === 'apache') &&
       gameState.buildings && Array.isArray(gameState.buildings)
     ) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'helipad' &&
-            building.owner === gameState.humanPlayer &&
-            building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          unitCommands.handleApacheHelipadCommand(commandableUnits, building, mapGrid)
-          return
-        }
+      const helipadTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'helipad'
+      )
+      if (helipadTarget) {
+        unitCommands.handleApacheHelipadCommand(commandableUnits, helipadTarget, mapGrid)
+        return
       }
     }
   }

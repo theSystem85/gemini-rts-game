@@ -25,6 +25,100 @@ function unregisterMine(mine) {
   mineLookup.delete(getTileKey(mine.tileX, mine.tileY))
 }
 
+function createMineExplosionEffect(tileX, tileY, radius = TILE_SIZE) {
+  const explosionX = tileX * TILE_SIZE + TILE_SIZE / 2
+  const explosionY = tileY * TILE_SIZE + TILE_SIZE / 2
+
+  gameState.explosions.push({
+    x: explosionX,
+    y: explosionY,
+    radius,
+    startTime: performance.now(),
+    duration: 300
+  })
+}
+
+function forEachMineExplosionTile(mine, radius, onTileDamage) {
+  const boundedRadius = Math.max(0, radius)
+  const maxOffset = Math.ceil(boundedRadius)
+  const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
+  const mapWidth = mapGrid.length > 0 ? mapGrid[0].length : 0
+  const mapHeight = mapGrid.length
+  const hasBounds = mapWidth > 0 && mapHeight > 0
+
+  for (let dx = -maxOffset; dx <= maxOffset; dx++) {
+    for (let dy = -maxOffset; dy <= maxOffset; dy++) {
+      const targetX = mine.tileX + dx
+      const targetY = mine.tileY + dy
+      if (hasBounds && (targetX < 0 || targetY < 0 || targetX >= mapWidth || targetY >= mapHeight)) {
+        continue
+      }
+      const distance = Math.hypot(dx, dy)
+      if (distance > boundedRadius) {
+        continue
+      }
+      const falloff = boundedRadius > 0 ? Math.max(0, 1 - distance / boundedRadius) : 1
+      const damage = MINE_DAMAGE_CENTER * falloff
+      if (damage <= 0) continue
+      onTileDamage(targetX, targetY, damage)
+    }
+  }
+}
+
+function applyDamageRecordForMineHit(targetKind, target, damageAmount) {
+  if (!(damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode)) {
+    return
+  }
+
+  if (targetKind === 'unit') {
+    recordDamage({
+      attackerId: null,
+      targetId: target.id,
+      targetKind: 'unit',
+      amount: damageAmount,
+      weapon: 'mine',
+      position: { x: target.x, y: target.y, space: 'world' },
+      tick: gameState.frameCount,
+      timeSeconds: gameState.gameTime
+    })
+    return
+  }
+
+  recordDamage({
+    attackerId: null,
+    targetId: target.id,
+    targetKind: 'building',
+    amount: damageAmount,
+    weapon: 'mine',
+    position: {
+      x: target.x * TILE_SIZE + (target.width * TILE_SIZE) / 2,
+      y: target.y * TILE_SIZE + (target.height * TILE_SIZE) / 2,
+      space: 'world'
+    },
+    tick: gameState.frameCount,
+    timeSeconds: gameState.gameTime
+  })
+}
+
+function applyMineDamageToBuildingAtTile(tileX, tileY, damage, buildings) {
+  buildings.forEach(building => {
+    for (let by = building.y; by < building.y + building.height; by++) {
+      for (let bx = building.x; bx < building.x + building.width; bx++) {
+        if (bx === tileX && by === tileY) {
+          const previousHealth = building.health
+          building.health = Math.max(0, building.health - damage)
+          const damageAmount = Math.max(0, previousHealth - building.health)
+          applyDamageRecordForMineHit('building', building, damageAmount)
+          if (building.id) {
+            broadcastBuildingDamage(building.id, damage, building.health)
+          }
+          return
+        }
+      }
+    }
+  })
+}
+
 /**
  * Create a new mine entity
  * @param {number} tileX - Tile X coordinate
@@ -110,42 +204,10 @@ export function hasActiveMine(tileX, tileY) {
 export function detonateMine(mine, units, buildings) {
   if (!mine) return
 
-  // Create explosion effect at mine location
-  const explosionX = mine.tileX * TILE_SIZE + TILE_SIZE / 2
-  const explosionY = mine.tileY * TILE_SIZE + TILE_SIZE / 2
-
-  gameState.explosions.push({
-    x: explosionX,
-    y: explosionY,
-    radius: TILE_SIZE,
-    startTime: performance.now(),
-    duration: 300
+  createMineExplosionEffect(mine.tileX, mine.tileY)
+  forEachMineExplosionTile(mine, MINE_EXPLOSION_RADIUS, (targetX, targetY, damage) => {
+    applyMineDamageToTile(targetX, targetY, damage, units, buildings)
   })
-
-  const radius = Math.max(0, MINE_EXPLOSION_RADIUS)
-  const maxOffset = Math.ceil(radius)
-  const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
-  const mapWidth = mapGrid.length > 0 ? mapGrid[0].length : 0
-  const mapHeight = mapGrid.length
-  const hasBounds = mapWidth > 0 && mapHeight > 0
-
-  for (let dx = -maxOffset; dx <= maxOffset; dx++) {
-    for (let dy = -maxOffset; dy <= maxOffset; dy++) {
-      const targetX = mine.tileX + dx
-      const targetY = mine.tileY + dy
-      if (hasBounds && (targetX < 0 || targetY < 0 || targetX >= mapWidth || targetY >= mapHeight)) {
-        continue
-      }
-      const distance = Math.hypot(dx, dy)
-      if (distance > radius) {
-        continue
-      }
-      const falloff = radius > 0 ? Math.max(0, 1 - distance / radius) : 1
-      const damage = MINE_DAMAGE_CENTER * falloff
-      if (damage <= 0) continue
-      applyMineDamageToTile(targetX, targetY, damage, units, buildings)
-    }
-  }
 
   // Remove the detonated mine
   const mineIndex = gameState.mines.indexOf(mine)
@@ -177,54 +239,11 @@ function applyMineDamageToTile(tileX, tileY, damage, units, buildings) {
       const previousHealth = unit.health
       unit.health = Math.max(0, unit.health - damage)
       const damageAmount = Math.max(0, previousHealth - unit.health)
-      if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
-        recordDamage({
-          attackerId: null,
-          targetId: unit.id,
-          targetKind: 'unit',
-          amount: damageAmount,
-          weapon: 'mine',
-          position: { x: unit.x, y: unit.y, space: 'world' },
-          tick: gameState.frameCount,
-          timeSeconds: gameState.gameTime
-        })
-      }
+      applyDamageRecordForMineHit('unit', unit, damageAmount)
     }
   })
 
-  // Damage buildings on this tile
-  buildings.forEach(building => {
-    for (let by = building.y; by < building.y + building.height; by++) {
-      for (let bx = building.x; bx < building.x + building.width; bx++) {
-        if (bx === tileX && by === tileY) {
-          const previousHealth = building.health
-          building.health = Math.max(0, building.health - damage)
-          const damageAmount = Math.max(0, previousHealth - building.health)
-          if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
-            recordDamage({
-              attackerId: null,
-              targetId: building.id,
-              targetKind: 'building',
-              amount: damageAmount,
-              weapon: 'mine',
-              position: {
-                x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
-                y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
-                space: 'world'
-              },
-              tick: gameState.frameCount,
-              timeSeconds: gameState.gameTime
-            })
-          }
-          // Broadcast building damage to host in multiplayer
-          if (building.id) {
-            broadcastBuildingDamage(building.id, damage, building.health)
-          }
-          return // Only damage once per building
-        }
-      }
-    }
-  })
+  applyMineDamageToBuildingAtTile(tileX, tileY, damage, buildings)
 
   // Check if there's a mine on this tile and damage it
   const mine = getMineAtTile(tileX, tileY)
@@ -282,44 +301,10 @@ export function removeMine(mine) {
 export function safeSweeperDetonation(mine, units, buildings) {
   if (!mine) return
 
-  // Create explosion effect at mine location
-  const explosionX = mine.tileX * TILE_SIZE + TILE_SIZE / 2
-  const explosionY = mine.tileY * TILE_SIZE + TILE_SIZE / 2
-
-  gameState.explosions.push({
-    x: explosionX,
-    y: explosionY,
-    radius: TILE_SIZE,
-    startTime: performance.now(),
-    duration: 300
+  createMineExplosionEffect(mine.tileX, mine.tileY)
+  forEachMineExplosionTile(mine, 1, (targetX, targetY, damage) => {
+    applyMineDamageWithSweeperImmunity(targetX, targetY, damage, units, buildings)
   })
-
-  const radius = 1 // Reduced radius for sweeper detonations to prevent chain reactions
-  const maxOffset = Math.ceil(radius)
-  const mapGrid = Array.isArray(gameState.mapGrid) ? gameState.mapGrid : []
-  const mapWidth = mapGrid.length > 0 ? mapGrid[0].length : 0
-  const mapHeight = mapGrid.length
-  const hasBounds = mapWidth > 0 && mapHeight > 0
-
-  for (let dx = -maxOffset; dx <= maxOffset; dx++) {
-    for (let dy = -maxOffset; dy <= maxOffset; dy++) {
-      const targetX = mine.tileX + dx
-      const targetY = mine.tileY + dy
-      if (hasBounds && (targetX < 0 || targetY < 0 || targetX >= mapWidth || targetY >= mapHeight)) {
-        continue
-      }
-      const distance = Math.hypot(dx, dy)
-      if (distance > radius) {
-        continue
-      }
-      const falloff = radius > 0 ? Math.max(0, 1 - distance / radius) : 1
-      const damage = MINE_DAMAGE_CENTER * falloff
-      if (damage <= 0) continue
-
-      // Apply damage but skip sweeping units
-      applyMineDamageWithSweeperImmunity(targetX, targetY, damage, units, buildings)
-    }
-  }
 
   // Remove the detonated mine
   const mineIndex = gameState.mines.indexOf(mine)
@@ -355,54 +340,11 @@ function applyMineDamageWithSweeperImmunity(tileX, tileY, damage, units, buildin
       const previousHealth = unit.health
       unit.health = Math.max(0, unit.health - damage)
       const damageAmount = Math.max(0, previousHealth - unit.health)
-      if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
-        recordDamage({
-          attackerId: null,
-          targetId: unit.id,
-          targetKind: 'unit',
-          amount: damageAmount,
-          weapon: 'mine',
-          position: { x: unit.x, y: unit.y, space: 'world' },
-          tick: gameState.frameCount,
-          timeSeconds: gameState.gameTime
-        })
-      }
+      applyDamageRecordForMineHit('unit', unit, damageAmount)
     }
   })
 
-  // Damage buildings on this tile
-  buildings.forEach(building => {
-    for (let by = building.y; by < building.y + building.height; by++) {
-      for (let bx = building.x; bx < building.x + building.width; bx++) {
-        if (bx === tileX && by === tileY) {
-          const previousHealth = building.health
-          building.health = Math.max(0, building.health - damage)
-          const damageAmount = Math.max(0, previousHealth - building.health)
-          if (damageAmount > 0 && gameState.gameStarted && !gameState.mapEditMode) {
-            recordDamage({
-              attackerId: null,
-              targetId: building.id,
-              targetKind: 'building',
-              amount: damageAmount,
-              weapon: 'mine',
-              position: {
-                x: building.x * TILE_SIZE + (building.width * TILE_SIZE) / 2,
-                y: building.y * TILE_SIZE + (building.height * TILE_SIZE) / 2,
-                space: 'world'
-              },
-              tick: gameState.frameCount,
-              timeSeconds: gameState.gameTime
-            })
-          }
-          // Broadcast building damage to host in multiplayer
-          if (building.id) {
-            broadcastBuildingDamage(building.id, damage, building.health)
-          }
-          return // Only damage once per building
-        }
-      }
-    }
-  })
+  applyMineDamageToBuildingAtTile(tileX, tileY, damage, buildings)
 
   // Note: Mines are not damaged by other mine explosions to prevent chain reactions
 }

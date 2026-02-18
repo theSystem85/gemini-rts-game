@@ -4,6 +4,11 @@ import { gameState } from '../gameState.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { isHelipadAvailableForUnit } from '../utils/helipadUtils.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
+import {
+  findActiveFriendlyBuildingAtTile,
+  isTileWithinBuilding,
+  isUnitAtTile
+} from './mouseHelpers.js'
 
 const CURSOR_CLASS_NAMES = [
   'repair-mode',
@@ -294,59 +299,50 @@ export class CursorManager {
         : []
 
       if (hasSelectedHarvesters) {
-        for (const building of gameState.buildings) {
-          if (building.type === 'oreRefinery' &&
-              building.owner === gameState.humanPlayer &&
-              building.health > 0 &&
-              tileX >= building.x && tileX < building.x + building.width &&
-              tileY >= building.y && tileY < building.y + building.height) {
-            this.isOverPlayerRefinery = true
-            break
-          }
-        }
+        this.isOverPlayerRefinery = Boolean(findActiveFriendlyBuildingAtTile(
+          gameState.buildings,
+          tileX,
+          tileY,
+          gameState.humanPlayer,
+          'oreRefinery'
+        ))
       }
 
       // Check for hospital when ambulances that are not fully loaded are selected
       if (hasSelectedNotFullyLoadedAmbulances) {
-        for (const building of gameState.buildings) {
-          if (building.type === 'hospital' &&
-              building.owner === gameState.humanPlayer &&
-              building.health > 0 &&
-              tileX >= building.x && tileX < building.x + building.width &&
-              tileY >= building.y && tileY < building.y + building.height) {
-            this.isOverPlayerHospital = true
-            break
-          }
-        }
+        this.isOverPlayerHospital = Boolean(findActiveFriendlyBuildingAtTile(
+          gameState.buildings,
+          tileX,
+          tileY,
+          gameState.humanPlayer,
+          'hospital'
+        ))
       }
 
       const hasUnitsNeedingGas = selectedUnits.some(
         u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75
       )
       if (hasUnitsNeedingGas) {
-        for (const building of gameState.buildings) {
-          if (building.type === 'gasStation' &&
-                building.owner === gameState.humanPlayer &&
-                building.health > 0 &&
-                tileX >= building.x && tileX < building.x + building.width &&
-                tileY >= building.y && tileY < building.y + building.height) {
-            this.isOverPlayerGasStation = true
-            break
-          }
-        }
+        this.isOverPlayerGasStation = Boolean(findActiveFriendlyBuildingAtTile(
+          gameState.buildings,
+          tileX,
+          tileY,
+          gameState.humanPlayer,
+          'gasStation'
+        ))
       }
 
       if (hasSelectedApaches) {
-        for (const building of gameState.buildings) {
-          if (building.type === 'helipad' &&
-                building.owner === gameState.humanPlayer &&
-                building.health > 0 &&
-                tileX >= building.x && tileX < building.x + building.width &&
-                tileY >= building.y && tileY < building.y + building.height) {
-            this.isOverFriendlyHelipad = true
-            this.isOverBlockedHelipad = !isHelipadAvailableForUnit(building, units, selectedApacheIds)
-            break
-          }
+        const helipadTarget = findActiveFriendlyBuildingAtTile(
+          gameState.buildings,
+          tileX,
+          tileY,
+          gameState.humanPlayer,
+          'helipad'
+        )
+        if (helipadTarget) {
+          this.isOverFriendlyHelipad = true
+          this.isOverBlockedHelipad = !isHelipadAvailableForUnit(helipadTarget, units, selectedApacheIds)
         }
       }
 
@@ -355,10 +351,7 @@ export class CursorManager {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer &&
               unit.crew && typeof unit.crew === 'object') {
-            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-            if (unitTileX === tileX && unitTileY === tileY) {
+            if (isUnitAtTile(unit, tileX, tileY)) {
               // Check if unit has missing crew members
               const missingCrew = Object.entries(unit.crew).filter(([_, alive]) => !alive)
               if (missingCrew.length > 0) {
@@ -376,9 +369,7 @@ export class CursorManager {
       if (hasSelectedTankers && units && Array.isArray(units)) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && typeof unit.maxGas === 'number') {
-            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            if (unitTileX === tileX && unitTileY === tileY && unit.gas < unit.maxGas) {
+            if (isUnitAtTile(unit, tileX, tileY) && unit.gas < unit.maxGas) {
               this.isOverRefuelableUnit = true
               break
             }
@@ -393,9 +384,7 @@ export class CursorManager {
         // Check units that can receive ammo
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && typeof unit.maxAmmunition === 'number') {
-            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-            if (unitTileX === tileX && unitTileY === tileY && unit.ammunition < unit.maxAmmunition) {
+            if (isUnitAtTile(unit, tileX, tileY) && unit.ammunition < unit.maxAmmunition) {
               this.isOverAmmoReceivableTarget = true
               break
             }
@@ -411,8 +400,7 @@ export class CursorManager {
                 continue
               }
 
-              if (tileX >= building.x && tileX < building.x + building.width &&
-                  tileY >= building.y && tileY < building.y + building.height) {
+              if (isTileWithinBuilding(tileX, tileY, building)) {
                 this.isOverAmmoReceivableTarget = true
                 break
               }
@@ -444,9 +432,7 @@ export class CursorManager {
         for (const unit of units) {
           if (unit.owner !== gameState.humanPlayer) continue
 
-          const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-          const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-          if (unitTileX !== tileX || unitTileY !== tileY) {
+          if (!isUnitAtTile(unit, tileX, tileY)) {
             continue
           }
 
@@ -475,10 +461,7 @@ export class CursorManager {
             const needsRepair = unit.health < unit.maxHealth
             const needsTow = unit.crew && (!unit.crew.driver || !unit.crew.commander)
             if (!needsRepair && !needsTow) continue
-            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-            if (unitTileX === tileX && unitTileY === tileY) {
+            if (isUnitAtTile(unit, tileX, tileY)) {
               this.isOverRepairableUnit = true
               break
             }
@@ -490,10 +473,7 @@ export class CursorManager {
       if (hasSelectedDamagedUnits && units && Array.isArray(units)) {
         for (const unit of units) {
           if (unit.owner === gameState.humanPlayer && unit.type === 'recoveryTank') {
-            const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-            const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-
-            if (unitTileX === tileX && unitTileY === tileY) {
+            if (isUnitAtTile(unit, tileX, tileY)) {
               this.isOverRecoveryTank = true
               break
             }
@@ -539,20 +519,13 @@ export class CursorManager {
         unit => unit.health < unit.maxHealth || unit.type === 'tankerTruck'
       )
       if (needsWorkshop) {
-        for (const building of gameState.buildings) {
-          if (
-            building.type === 'vehicleWorkshop' &&
-            building.owner === gameState.humanPlayer &&
-            building.health > 0 &&
-            tileX >= building.x &&
-            tileX < building.x + building.width &&
-            tileY >= building.y &&
-            tileY < building.y + building.height
-          ) {
-            this.isOverPlayerWorkshop = true
-            break
-          }
-        }
+        this.isOverPlayerWorkshop = Boolean(findActiveFriendlyBuildingAtTile(
+          gameState.buildings,
+          tileX,
+          tileY,
+          gameState.humanPlayer,
+          'vehicleWorkshop'
+        ))
       }
     }
 

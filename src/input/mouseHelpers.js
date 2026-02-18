@@ -4,6 +4,42 @@ import { showNotification } from '../ui/notifications.js'
 import { GAME_DEFAULT_CURSOR } from './cursorStyles.js'
 import { getUnitSelectionCenter } from './selectionManager.js'
 
+export function getUnitTilePosition(unit) {
+  return {
+    tileX: Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE),
+    tileY: Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
+  }
+}
+
+export function isUnitAtTile(unit, tileX, tileY) {
+  const position = getUnitTilePosition(unit)
+  return position.tileX === tileX && position.tileY === tileY
+}
+
+export function isTileWithinBuilding(tileX, tileY, building) {
+  return tileX >= building.x && tileX < building.x + building.width &&
+    tileY >= building.y && tileY < building.y + building.height
+}
+
+export function isActiveFriendlyBuildingAtTile(tileX, tileY, building, playerId, requiredType = null) {
+  if (!building || building.owner !== playerId || building.health <= 0) {
+    return false
+  }
+  if (requiredType && building.type !== requiredType) {
+    return false
+  }
+  return isTileWithinBuilding(tileX, tileY, building)
+}
+
+export function findActiveFriendlyBuildingAtTile(buildings, tileX, tileY, playerId, requiredType) {
+  if (!Array.isArray(buildings)) {
+    return null
+  }
+  return buildings.find(building =>
+    isActiveFriendlyBuildingAtTile(tileX, tileY, building, playerId, requiredType)
+  ) || null
+}
+
 export function isRallyPointTileBlocked(tileX, tileY) {
   const occupancyMap = gameState.occupancyMap
   if (!occupancyMap || occupancyMap.length === 0) {
@@ -199,9 +235,7 @@ export function isOverRecoveryTankAt(handler, worldX, worldY) {
 
   return handler.gameUnits.some(unit => {
     if (unit.type === 'recoveryTank' && unit.owner === gameState.humanPlayer) {
-      const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-      const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-      return unitTileX === tileX && unitTileY === tileY
+      return isUnitAtTile(unit, tileX, tileY)
     }
     return false
   })
@@ -218,9 +252,7 @@ export function isOverDamagedUnitAt(handler, worldX, worldY, selectedUnits) {
         unit.type !== 'recoveryTank' &&
         unit.health < unit.maxHealth &&
         !selectedUnits.includes(unit)) {
-      const unitTileX = Math.floor((unit.x + TILE_SIZE / 2) / TILE_SIZE)
-      const unitTileY = Math.floor((unit.y + TILE_SIZE / 2) / TILE_SIZE)
-      return unitTileX === tileX && unitTileY === tileY
+      return isUnitAtTile(unit, tileX, tileY)
     }
     return false
   })

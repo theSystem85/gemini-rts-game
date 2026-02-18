@@ -41,6 +41,7 @@
     "@playwright/test": "^1.58.1",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.32.0",
+    "jscpd": "^4.0.8",
     "jsdom": "^27.4.0",
     "lighthouse": "^13.0.2",
     "vite": "^6.0.3",

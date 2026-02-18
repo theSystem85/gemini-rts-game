@@ -72,6 +72,27 @@ export class SelectionManager {
     return building.owner === humanPlayer || (humanPlayer === 'player1' && building.owner === 'player')
   }
 
+  toggleBuildingSelection(target, selectedUnits) {
+    if (target.selected) {
+      target.selected = false
+      const index = selectedUnits.indexOf(target)
+      if (index > -1) {
+        selectedUnits.splice(index, 1)
+      }
+      return
+    }
+    target.selected = true
+    selectedUnits.push(target)
+  }
+
+  clearUnitAndFactorySelections(units, selectedUnits) {
+    units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
+    selectedUnits.length = 0
+
+    const factories = gameState.factories || []
+    factories.forEach(f => f.selected = false)
+  }
+
   handleUnitSelection(clickedUnit, e, units, factories, selectedUnits) {
     hideLlmQueueTooltip()
     this.clearWreckSelection()
@@ -167,28 +188,11 @@ export class SelectionManager {
     hideLlmQueueTooltip()
     this.clearWreckSelection()
     if (e.shiftKey) {
-      // Shift+click on factory: Add/remove factory to/from current selection
-      if (selectedFactory.selected) {
-        // Remove from selection
-        selectedFactory.selected = false
-        const index = selectedUnits.indexOf(selectedFactory)
-        if (index > -1) {
-          selectedUnits.splice(index, 1)
-        }
-      } else {
-        // Add to selection
-        selectedFactory.selected = true
-        selectedUnits.push(selectedFactory)
-      }
+      this.toggleBuildingSelection(selectedFactory, selectedUnits)
       // No sound for building selection
     } else {
       // Normal click: Clear existing selection and select factory
-      units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
-      selectedUnits.length = 0
-
-      // Clear factory selections
-      const factories = gameState.factories || []
-      factories.forEach(f => f.selected = false)
+      this.clearUnitAndFactorySelections(units, selectedUnits)
 
       // Clear attack group targets when selection changes
       this.clearAttackGroupTargets()
@@ -207,28 +211,11 @@ export class SelectionManager {
     hideLlmQueueTooltip()
     this.clearWreckSelection()
     if (e.shiftKey) {
-      // Shift+click on building: Add/remove building to/from current selection
-      if (selectedBuilding.selected) {
-        // Remove from selection
-        selectedBuilding.selected = false
-        const index = selectedUnits.indexOf(selectedBuilding)
-        if (index > -1) {
-          selectedUnits.splice(index, 1)
-        }
-      } else {
-        // Add to selection
-        selectedBuilding.selected = true
-        selectedUnits.push(selectedBuilding)
-      }
+      this.toggleBuildingSelection(selectedBuilding, selectedUnits)
       // No sound for building selection
     } else {
       // Normal click: Clear existing selection and select building
-      units.forEach(u => { if (this.isSelectableUnit(u)) u.selected = false })
-      selectedUnits.length = 0
-
-      // Clear factory selections
-      const factories = gameState.factories || []
-      factories.forEach(f => f.selected = false)
+      this.clearUnitAndFactorySelections(units, selectedUnits)
 
       // Clear any other building selections
       if (gameState.buildings) {

@@ -14,17 +14,38 @@ function loadButtonImage(button) {
   }
 }
 
+function setUnlockedButtonState(button, showNewLabel) {
+  if (!button) {
+    return
+  }
+  loadButtonImage(button)
+  button.classList.add('unlocked')
+  const label = button.querySelector('.new-label')
+  if (label) {
+    label.style.display = showNewLabel ? 'block' : 'none'
+  }
+}
+
+function unlockTypeInSet(availableSet, newSet, buttonMap, type) {
+  if (availableSet.has(type)) {
+    return false
+  }
+  availableSet.add(type)
+  newSet.add(type)
+  setUnlockedButtonState(buttonMap.get(type), true)
+  return true
+}
+
+function forceUnlockTypeInSet(availableSet, newSet, buttonMap, type) {
+  if (!availableSet.has(type)) {
+    availableSet.add(type)
+  }
+  newSet.delete(type)
+  setUnlockedButtonState(buttonMap.get(type), false)
+}
+
 export function unlockUnitType(controller, type, skipSound = false) {
-  if (!gameState.availableUnitTypes.has(type)) {
-    gameState.availableUnitTypes.add(type)
-    gameState.newUnitTypes.add(type)
-    const button = controller.unitButtons.get(type)
-    if (button) {
-      loadButtonImage(button)
-      button.classList.add('unlocked')
-      const label = button.querySelector('.new-label')
-      if (label) label.style.display = 'block'
-    }
+  if (unlockTypeInSet(gameState.availableUnitTypes, gameState.newUnitTypes, controller.unitButtons, type)) {
     if (!skipSound) {
       playSound('new_units_types_available', 1.0, 5, true) // Throttle for 5 seconds
     }
@@ -36,16 +57,7 @@ export function unlockUnitType(controller, type, skipSound = false) {
 }
 
 export function unlockBuildingType(controller, type, skipSound = false) {
-  if (!gameState.availableBuildingTypes.has(type)) {
-    gameState.availableBuildingTypes.add(type)
-    gameState.newBuildingTypes.add(type)
-    const button = controller.buildingButtons.get(type)
-    if (button) {
-      loadButtonImage(button)
-      button.classList.add('unlocked')
-      const label = button.querySelector('.new-label')
-      if (label) label.style.display = 'block'
-    }
+  if (unlockTypeInSet(gameState.availableBuildingTypes, gameState.newBuildingTypes, controller.buildingButtons, type)) {
     if (!skipSound) {
       playSound('new_building_types_available', 1.0, 5, true) // Throttle for 5 seconds
     }
@@ -65,32 +77,14 @@ export function unlockMultipleTypes(controller, unitTypes = [], buildingTypes = 
 
   // Unlock units (skip individual sounds and button state updates)
   unitTypes.forEach(type => {
-    if (!gameState.availableUnitTypes.has(type)) {
-      gameState.availableUnitTypes.add(type)
-      gameState.newUnitTypes.add(type)
-      const button = controller.unitButtons.get(type)
-      if (button) {
-        loadButtonImage(button)
-        button.classList.add('unlocked')
-        const label = button.querySelector('.new-label')
-        if (label) label.style.display = 'block'
-      }
+    if (unlockTypeInSet(gameState.availableUnitTypes, gameState.newUnitTypes, controller.unitButtons, type)) {
       unlockedUnits++
     }
   })
 
   // Unlock buildings (skip individual sounds and button state updates)
   buildingTypes.forEach(type => {
-    if (!gameState.availableBuildingTypes.has(type)) {
-      gameState.availableBuildingTypes.add(type)
-      gameState.newBuildingTypes.add(type)
-      const button = controller.buildingButtons.get(type)
-      if (button) {
-        loadButtonImage(button)
-        button.classList.add('unlocked')
-        const label = button.querySelector('.new-label')
-        if (label) label.style.display = 'block'
-      }
+    if (unlockTypeInSet(gameState.availableBuildingTypes, gameState.newBuildingTypes, controller.buildingButtons, type)) {
       unlockedBuildings++
     }
   })
@@ -123,32 +117,12 @@ export function unlockMultipleTypes(controller, unitTypes = [], buildingTypes = 
 
 // Force-unlock a unit type without triggering sounds or "new" labels
 export function forceUnlockUnitType(controller, type) {
-  if (!gameState.availableUnitTypes.has(type)) {
-    gameState.availableUnitTypes.add(type)
-  }
-  gameState.newUnitTypes.delete(type)
-  const button = controller.unitButtons.get(type)
-  if (button) {
-    loadButtonImage(button)
-    button.classList.add('unlocked')
-    const label = button.querySelector('.new-label')
-    if (label) label.style.display = 'none'
-  }
+  forceUnlockTypeInSet(gameState.availableUnitTypes, gameState.newUnitTypes, controller.unitButtons, type)
 }
 
 // Force-unlock a building type without triggering sounds or "new" labels
 export function forceUnlockBuildingType(controller, type) {
-  if (!gameState.availableBuildingTypes.has(type)) {
-    gameState.availableBuildingTypes.add(type)
-  }
-  gameState.newBuildingTypes.delete(type)
-  const button = controller.buildingButtons.get(type)
-  if (button) {
-    loadButtonImage(button)
-    button.classList.add('unlocked')
-    const label = button.querySelector('.new-label')
-    if (label) label.style.display = 'none'
-  }
+  forceUnlockTypeInSet(gameState.availableBuildingTypes, gameState.newBuildingTypes, controller.buildingButtons, type)
 }
 
 // Sync tech tree unlocks based on existing player buildings

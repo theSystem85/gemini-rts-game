@@ -17,6 +17,7 @@ build
 coverage
 *.local
 TODO-Temporary.md
+report
 
 # Test logs
 playwright-report

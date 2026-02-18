@@ -31,6 +31,105 @@ function loadImagesForAvailableTypes(controller) {
   })
 }
 
+function clearNewTypeLabel(newTypesSet, type, button) {
+  if (!newTypesSet.has(type)) {
+    return
+  }
+  newTypesSet.delete(type)
+  const label = button.querySelector('.new-label')
+  if (label) {
+    label.style.display = 'none'
+  }
+}
+
+function getShiftWheelDirection(e) {
+  let scrollUp = false
+  let scrollDown = false
+
+  if (e.deltaX < 0) {
+    scrollUp = true
+  } else if (e.deltaX > 0) {
+    scrollDown = true
+  }
+
+  if (!scrollUp && !scrollDown) {
+    if (e.deltaY < 0 || Object.is(e.deltaY, -0)) {
+      scrollUp = true
+    } else if (e.deltaY > 0) {
+      scrollDown = true
+    }
+  }
+
+  if (!scrollUp && !scrollDown && e.wheelDelta !== undefined) {
+    if (e.wheelDelta > 0) {
+      scrollUp = true
+    } else if (e.wheelDelta < 0) {
+      scrollDown = true
+    }
+  }
+
+  if (!scrollUp && !scrollDown && e.detail !== undefined) {
+    if (e.detail < 0) {
+      scrollUp = true
+    } else if (e.detail > 0) {
+      scrollDown = true
+    }
+  }
+
+  if (scrollUp) return 'up'
+  if (scrollDown) return 'down'
+  return null
+}
+
+function getQueuedCount(items, current, button, includeCurrentInCount = true) {
+  const queuedCount = items.filter(item => item.button === button).length
+  const currentCount = includeCurrentInCount && current && current.button === button ? 1 : 0
+  return queuedCount + currentCount
+}
+
+function removeLastQueuedUnit(button) {
+  for (let i = productionQueue.unitItems.length - 1; i >= 0; i--) {
+    if (productionQueue.unitItems[i].button === button) {
+      if (i === 0 && productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
+        productionQueue.cancelUnitProduction()
+      } else {
+        productionQueue.tryResumeProduction()
+        productionQueue.unitItems.splice(i, 1)
+
+        const remainingCount = getQueuedCount(productionQueue.unitItems, productionQueue.currentUnit, button)
+        productionQueue.updateBatchCounter(button, remainingCount)
+      }
+      return true
+    }
+  }
+  return false
+}
+
+function removeLastQueuedBuilding(button, includeCurrentInCount = true) {
+  for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
+    const queued = productionQueue.buildingItems[i]
+    if (queued.button === button) {
+      if (i === 0 && productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+        productionQueue.cancelBuildingProduction()
+      } else {
+        productionQueue.tryResumeProduction()
+        productionQueue.buildingItems.splice(i, 1)
+        productionQueue.removeBlueprint(queued)
+
+        const remainingCount = getQueuedCount(
+          productionQueue.buildingItems,
+          productionQueue.currentBuilding,
+          button,
+          includeCurrentInCount
+        )
+        productionQueue.updateBatchCounter(button, remainingCount)
+      }
+      return true
+    }
+  }
+  return false
+}
+
 export function setupAllProductionButtons(controller) {
   // Only setup once to prevent duplicate event listeners
   if (controller.isSetup) {
@@ -168,9 +267,7 @@ export function setupUnitButtons(controller) {
       button.title = '' // Clear requirement tooltip
 
       if (gameState.newUnitTypes.has(unitType)) {
-        gameState.newUnitTypes.delete(unitType)
-        const label = button.querySelector('.new-label')
-        if (label) label.style.display = 'none'
+        clearNewTypeLabel(gameState.newUnitTypes, unitType, button)
       }
 
       // Always allow queuing
@@ -192,28 +289,7 @@ export function setupUnitButtons(controller) {
           productionQueue.cancelUnitProduction()
         }
       } else {
-        // Find the last queued item of this type
-        // Allow canceling ALL queued items, including currently producing ones
-        for (let i = productionQueue.unitItems.length - 1; i >= 0; i--) {
-          if (productionQueue.unitItems[i].button === button) {
-            // If we're canceling the currently producing unit, cancel it properly
-            if (i === 0 && productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
-              productionQueue.cancelUnitProduction()
-              break
-            } else {
-              // Remove queued unit (no money refund for queued items)
-              productionQueue.tryResumeProduction()
-              productionQueue.unitItems.splice(i, 1)
-
-              const remainingCount = productionQueue.unitItems.filter(
-                item => item.button === button
-              ).length + (productionQueue.currentUnit && productionQueue.currentUnit.button === button ? 1 : 0)
-
-              productionQueue.updateBatchCounter(button, remainingCount)
-              break
-            }
-          }
-        }
+        removeLastQueuedUnit(button)
       }
     })
 
@@ -226,74 +302,16 @@ export function setupUnitButtons(controller) {
       e.preventDefault()
       e.stopPropagation()
 
-      // Determine scroll direction - use deltaX as primary (some systems report scroll in deltaX)
-      // then fall back to deltaY, wheelDelta, and detail
-      let scrollUp = false
-      let scrollDown = false
+      const direction = getShiftWheelDirection(e)
 
-      // Method 1: deltaX (some trackpads/systems report horizontal scroll for wheel)
-      if (e.deltaX < 0) {
-        scrollUp = true
-      } else if (e.deltaX > 0) {
-        scrollDown = true
-      }
-
-      // Method 2: deltaY (most standard) - only if deltaX didn't determine direction
-      if (!scrollUp && !scrollDown) {
-        if (e.deltaY < 0 || Object.is(e.deltaY, -0)) {
-          scrollUp = true
-        } else if (e.deltaY > 0) {
-          scrollDown = true
-        }
-      }
-
-      // Method 3: wheelDelta (older browsers/systems) - only if neither deltaX nor deltaY worked
-      if (!scrollUp && !scrollDown && e.wheelDelta !== undefined) {
-        if (e.wheelDelta > 0) {
-          scrollUp = true
-        } else if (e.wheelDelta < 0) {
-          scrollDown = true
-        }
-      }
-
-      // Method 4: detail (Firefox legacy) - final fallback
-      if (!scrollUp && !scrollDown && e.detail !== undefined) {
-        if (e.detail < 0) {
-          scrollUp = true
-        } else if (e.detail > 0) {
-          scrollDown = true
-        }
-      }
-
-      if (scrollUp) {
+      if (direction === 'up') {
         // Scroll up - queue one more unit if possible
         if (!gameState.gamePaused && !button.classList.contains('disabled')) {
           const unitType = button.getAttribute('data-unit-type')
           productionQueue.addItem(unitType, button, false)
         }
-      } else if (scrollDown) {
-        // Scroll down - remove last queued unit of this type
-        // Allow canceling ALL blue bubbles, including currently producing ones
-        for (let i = productionQueue.unitItems.length - 1; i >= 0; i--) {
-          if (productionQueue.unitItems[i].button === button) {
-            // If we're canceling the currently producing unit, cancel it properly
-            if (i === 0 && productionQueue.currentUnit && productionQueue.currentUnit.button === button) {
-              productionQueue.cancelUnitProduction()
-              break
-            } else {
-              // Remove queued unit (no money refund for queued items)
-              productionQueue.tryResumeProduction()
-              productionQueue.unitItems.splice(i, 1)
-
-              const remainingCount = productionQueue.unitItems.filter(
-                item => item.button === button
-              ).length + (productionQueue.currentUnit && productionQueue.currentUnit.button === button ? 1 : 0)
-
-              productionQueue.updateBatchCounter(button, remainingCount)
-              break
-            }
-          }
-        }
+      } else if (direction === 'down') {
+        removeLastQueuedUnit(button)
       }
     }, { passive: false })
 
@@ -469,11 +487,7 @@ export function setupBuildingButtons(controller) {
 
         if (timeSinceLastClick <= DOUBLE_CLICK_THRESHOLD) {
           // Double-click: Queue another building of the same type (stacking)
-          if (gameState.newBuildingTypes.has(buildingType)) {
-            gameState.newBuildingTypes.delete(buildingType)
-            const label = button.querySelector('.new-label')
-            if (label) label.style.display = 'none'
-          }
+          clearNewTypeLabel(gameState.newBuildingTypes, buildingType, button)
           productionQueue.addItem(buildingType, button, true)
           showNotification(`Queued another ${buildingData[buildingType].displayName}`)
         } else {
@@ -495,11 +509,7 @@ export function setupBuildingButtons(controller) {
       buildingCosts[buildingType] || 0 // Cost is used by productionQueue internally
 
       // Always allow queuing
-      if (gameState.newBuildingTypes.has(buildingType)) {
-        gameState.newBuildingTypes.delete(buildingType)
-        const label = button.querySelector('.new-label')
-        if (label) label.style.display = 'none'
-      }
+      clearNewTypeLabel(gameState.newBuildingTypes, buildingType, button)
 
       productionQueue.addItem(buildingType, button, true)
       lastClickTime = currentTime
@@ -521,28 +531,11 @@ export function setupBuildingButtons(controller) {
         if (stackedCount > 0) {
           // If there are stacked buildings, cancel the last one from the queue
           // Allow canceling ALL stacked buildings, including currently producing ones
-          for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-            const queued = productionQueue.buildingItems[i]
-            if (queued.button === button) {
-              // If we're canceling the currently producing building, cancel it properly
-              if (i === 0 && productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
-                productionQueue.cancelBuildingProduction()
-                showNotification('Cancelled building construction')
-                break
-              } else {
-                // Remove queued building (no money refund for stacked buildings)
-                productionQueue.tryResumeProduction()
-                productionQueue.buildingItems.splice(i, 1)
-                productionQueue.removeBlueprint(queued)
-
-                const remainingCount = productionQueue.buildingItems.filter(
-                  item => item.button === button
-                ).length
-
-                productionQueue.updateBatchCounter(button, remainingCount)
-                showNotification('Cancelled stacked building construction')
-                break
-              }
+          if (removeLastQueuedBuilding(button, false)) {
+            if (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
+              showNotification('Cancelled building construction')
+            } else {
+              showNotification('Cancelled stacked building construction')
             }
           }
         } else {
@@ -563,30 +556,7 @@ export function setupBuildingButtons(controller) {
           productionQueue.cancelBuildingProduction()
         }
       } else {
-        // Find the last queued item of this type
-        // Allow canceling ALL queued items, including currently producing ones
-        for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-          const queued = productionQueue.buildingItems[i]
-          if (queued.button === button) {
-            // If we're canceling the currently producing building, cancel it properly
-            if (i === 0 && productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
-              productionQueue.cancelBuildingProduction()
-              break
-            } else {
-              // Remove queued building (no money refund for queued items)
-              productionQueue.tryResumeProduction()
-              productionQueue.buildingItems.splice(i, 1)
-              productionQueue.removeBlueprint(queued)
-
-              const remainingCount = productionQueue.buildingItems.filter(
-                item => item.button === button
-              ).length + (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button ? 1 : 0)
-
-              productionQueue.updateBatchCounter(button, remainingCount)
-              break
-            }
-          }
-        }
+        removeLastQueuedBuilding(button, true)
       }
     })
 
@@ -599,75 +569,15 @@ export function setupBuildingButtons(controller) {
       e.preventDefault()
       e.stopPropagation()
 
-      // Determine scroll direction - use deltaX as primary (some systems report scroll in deltaX)
-      // then fall back to deltaY, wheelDelta, and detail
-      let scrollUp = false
-      let scrollDown = false
+      const direction = getShiftWheelDirection(e)
 
-      // Method 1: deltaX (some trackpads/systems report horizontal scroll for wheel)
-      if (e.deltaX < 0) {
-        scrollUp = true
-      } else if (e.deltaX > 0) {
-        scrollDown = true
-      }
-
-      // Method 2: deltaY (most standard) - only if deltaX didn't determine direction
-      if (!scrollUp && !scrollDown) {
-        if (e.deltaY < 0 || Object.is(e.deltaY, -0)) {
-          scrollUp = true
-        } else if (e.deltaY > 0) {
-          scrollDown = true
-        }
-      }
-
-      // Method 3: wheelDelta (older browsers/systems) - only if neither deltaX nor deltaY worked
-      if (!scrollUp && !scrollDown && e.wheelDelta !== undefined) {
-        if (e.wheelDelta > 0) {
-          scrollUp = true
-        } else if (e.wheelDelta < 0) {
-          scrollDown = true
-        }
-      }
-
-      // Method 4: detail (Firefox legacy) - final fallback
-      if (!scrollUp && !scrollDown && e.detail !== undefined) {
-        if (e.detail < 0) {
-          scrollUp = true
-        } else if (e.detail > 0) {
-          scrollDown = true
-        }
-      }
-
-      if (scrollUp) {
+      if (direction === 'up') {
         // Scroll up - queue one more building if possible
         if (!gameState.gamePaused && !button.classList.contains('disabled')) {
           productionQueue.addItem(buildingType, button, true)
         }
-      } else if (scrollDown) {
-        // Scroll down - remove last queued building of this type
-        // Allow canceling ALL blue bubbles, including currently producing ones
-        for (let i = productionQueue.buildingItems.length - 1; i >= 0; i--) {
-          const queued = productionQueue.buildingItems[i]
-          if (queued.button === button) {
-            // If we're canceling the currently producing building, cancel it properly
-            if (i === 0 && productionQueue.currentBuilding && productionQueue.currentBuilding.button === button) {
-              productionQueue.cancelBuildingProduction()
-              break
-            } else {
-              // Remove queued building (no money refund for queued items)
-              productionQueue.tryResumeProduction()
-              productionQueue.buildingItems.splice(i, 1)
-              productionQueue.removeBlueprint(queued)
-
-              const remainingCount = productionQueue.buildingItems.filter(
-                item => item.button === button
-              ).length + (productionQueue.currentBuilding && productionQueue.currentBuilding.button === button ? 1 : 0)
-
-              productionQueue.updateBatchCounter(button, remainingCount)
-              break
-            }
-          }
-        }
+      } else if (direction === 'down') {
+        removeLastQueuedBuilding(button, true)
       }
     }, { passive: false })
   })

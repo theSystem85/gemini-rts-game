@@ -149,6 +149,27 @@ function calculateRetreatMovement(unit, _mapGrid) {
   }
 }
 
+function clearRetreatMovementState(unit) {
+  unit.path = []
+  unit.moveTarget = null
+
+  if (unit.movement) {
+    unit.movement.isMoving = false
+    unit.movement.targetVelocity = { x: 0, y: 0 }
+  }
+}
+
+function clearRetreatState(unit) {
+  unit.isRetreating = false
+  unit.retreatTarget = null
+  unit.retreatMovementDirection = null
+  unit.isMovingBackwards = false
+  unit.canAccelerate = true
+  unit.canFire = true
+  unit.retreatStuckDetection = null
+  clearRetreatMovementState(unit)
+}
+
 /**
  * Update retreat behavior for a unit
  * Called from the main game loop
@@ -166,21 +187,7 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
 
   if (distanceToRetreat < TILE_SIZE * 0.8) {
     // Reached retreat position - stop retreating and clear all retreat state
-    unit.isRetreating = false
-    unit.retreatTarget = null
-    unit.retreatMovementDirection = null
-    unit.path = []
-    unit.moveTarget = null
-    unit.isMovingBackwards = false
-    unit.canAccelerate = true
-    unit.canFire = true // Reset firing capability when retreat ends
-    unit.retreatStuckDetection = null // Clear stuck detection
-
-    // Clear movement system state
-    if (unit.movement) {
-      unit.movement.isMoving = false
-      unit.movement.targetVelocity = { x: 0, y: 0 }
-    }
+    clearRetreatState(unit)
 
     // Keep target for defensive firing but don't chase
     if (unit.retreatOriginalTarget && unit.retreatOriginalTarget.health > 0) {
@@ -200,21 +207,7 @@ export function updateRetreatBehavior(unit, now, mapGrid, units = []) {
   // Check if retreat path is blocked by obstacles or units
   if (checkRetreatPathBlocked(unit, mapGrid, units)) {
     // Path is blocked - stop retreat here and clear retreat state
-    unit.isRetreating = false
-    unit.retreatTarget = null
-    unit.retreatMovementDirection = null
-    unit.path = []
-    unit.moveTarget = null
-    unit.isMovingBackwards = false
-    unit.canAccelerate = true
-    unit.canFire = true // Reset firing capability when retreat ends
-    unit.retreatStuckDetection = null // Clear stuck detection
-
-    // Clear movement system state
-    if (unit.movement) {
-      unit.movement.isMoving = false
-      unit.movement.targetVelocity = { x: 0, y: 0 }
-    }
+    clearRetreatState(unit)
 
     // Keep original target for defensive firing
     if (unit.retreatOriginalTarget && unit.retreatOriginalTarget.health > 0) {
@@ -298,21 +291,7 @@ function updateRetreatMovement(unit, now) {
       // If stuck for more than 2 seconds, stop retreat
       if (stuckDetection.stuckTime > 2000) {
         // Clear retreat state - unit is stuck
-        unit.isRetreating = false
-        unit.retreatTarget = null
-        unit.retreatMovementDirection = null
-        unit.path = []
-        unit.moveTarget = null
-        unit.isMovingBackwards = false
-        unit.canAccelerate = true
-        unit.canFire = true // Reset firing capability when retreat ends
-        unit.retreatStuckDetection = null
-
-        // Clear movement system state
-        if (unit.movement) {
-          unit.movement.isMoving = false
-          unit.movement.targetVelocity = { x: 0, y: 0 }
-        }
+        clearRetreatState(unit)
 
         return
       }
@@ -352,24 +331,8 @@ function updateRetreatCombat(unit, _now) {
 export function cancelRetreat(unit) {
   if (!isRetreating(unit)) return
 
-  unit.isRetreating = false
-  unit.retreatTarget = null
-  unit.retreatMovementDirection = null
+  clearRetreatState(unit)
   unit.retreatOriginalTarget = null
-  unit.isMovingBackwards = false
-  unit.canFire = true
-  unit.canAccelerate = true
-  unit.retreatStuckDetection = null // Clear stuck detection
-
-  // Clear movement-related properties
-  unit.path = []
-  unit.moveTarget = null
-
-  // Clear any retreat-related movement flags
-  if (unit.movement) {
-    unit.movement.isMoving = false
-    unit.movement.targetVelocity = { x: 0, y: 0 }
-  }
 }
 
 /**

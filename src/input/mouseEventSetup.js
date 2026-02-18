@@ -5,6 +5,14 @@ import { notifyMapEditorWheel } from '../ui/mapEditorControls.js'
 import { hideLlmQueueTooltip } from '../ui/llmQueueTooltip.js'
 import { keybindingManager, KEYBINDING_CONTEXTS } from './keybindings.js'
 
+function getWorldPointerPosition(gameCanvas, event) {
+  const rect = gameCanvas.getBoundingClientRect()
+  return {
+    worldX: event.clientX - rect.left + gameState.scrollOffset.x,
+    worldY: event.clientY - rect.top + gameState.scrollOffset.y
+  }
+}
+
 export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid, selectedUnits, selectionManager, unitCommands, cursorManager) {
   handler.gameFactories = factories
   handler.gameUnits = units
@@ -13,9 +21,7 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
   gameCanvas.addEventListener('contextmenu', e => e.preventDefault())
 
   gameCanvas.addEventListener('mousedown', e => {
-    const rect = gameCanvas.getBoundingClientRect()
-    const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-    const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    const { worldX, worldY } = getWorldPointerPosition(gameCanvas, e)
 
     if (gameState.mapEditMode && e.button === 0) {
       const tileX = Math.floor(worldX / TILE_SIZE)
@@ -46,9 +52,7 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
   })
 
   gameCanvas.addEventListener('mousemove', e => {
-    const rect = gameCanvas.getBoundingClientRect()
-    const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-    const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    const { worldX, worldY } = getWorldPointerPosition(gameCanvas, e)
 
     if (gameState.mapEditMode && (e.buttons & 1) && !(e.buttons & 2)) {
       const tileX = Math.floor(worldX / TILE_SIZE)
@@ -75,9 +79,7 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
   })
 
   gameCanvas.addEventListener('mouseup', e => {
-    const rect = gameCanvas.getBoundingClientRect()
-    const worldX = e.clientX - rect.left + gameState.scrollOffset.x
-    const worldY = e.clientY - rect.top + gameState.scrollOffset.y
+    const { worldX, worldY } = getWorldPointerPosition(gameCanvas, e)
 
     if (gameState.mapEditMode) {
       const tileX = Math.floor(worldX / TILE_SIZE)

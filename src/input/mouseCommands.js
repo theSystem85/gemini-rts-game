@@ -4,6 +4,7 @@ import { markWaypointsAdded } from '../game/waypointSounds.js'
 import { findWreckAtTile } from '../game/unitWreckManager.js'
 import { playSound } from '../sound.js'
 import { findEnemyTarget } from './mouseHelpers.js'
+import { findActiveFriendlyBuildingAtTile } from './mouseHelpers.js'
 import { isForceAttackModifierActive } from '../utils/inputUtils.js'
 import { initiateRetreat } from '../behaviours/retreat.js'
 import { getUnitSelectionCenter } from './selectionManager.js'
@@ -144,29 +145,27 @@ export function handleStandardCommands(handler, worldX, worldY, selectedUnits, u
     gameState.buildings &&
     Array.isArray(gameState.buildings)
   ) {
-    for (const building of gameState.buildings) {
-      if (building.type === 'helipad' &&
-          building.owner === gameState.humanPlayer &&
-          building.health > 0 &&
-          tileX >= building.x && tileX < building.x + building.width &&
-          tileY >= building.y && tileY < building.y + building.height) {
-        unitCommands.handleApacheHelipadCommand(commandableUnits, building, mapGrid)
-        return
-      }
+    const helipadTarget = findActiveFriendlyBuildingAtTile(
+      gameState.buildings,
+      tileX,
+      tileY,
+      gameState.humanPlayer,
+      'helipad'
+    )
+    if (helipadTarget) {
+      unitCommands.handleApacheHelipadCommand(commandableUnits, helipadTarget, mapGrid)
+      return
     }
   }
 
   if (hasSelectedHarvesters && gameState.buildings && Array.isArray(gameState.buildings)) {
-    for (const building of gameState.buildings) {
-      if (building.type === 'oreRefinery' &&
-          building.owner === gameState.humanPlayer &&
-          building.health > 0 &&
-          tileX >= building.x && tileX < building.x + building.width &&
-          tileY >= building.y && tileY < building.y + building.height) {
-        refineryTarget = building
-        break
-      }
-    }
+    refineryTarget = findActiveFriendlyBuildingAtTile(
+      gameState.buildings,
+      tileX,
+      tileY,
+      gameState.humanPlayer,
+      'oreRefinery'
+    )
   }
 
   if (hasSelectedHarvesters &&
@@ -180,37 +179,34 @@ export function handleStandardCommands(handler, worldX, worldY, selectedUnits, u
   let hospitalTarget = null
   let gasStationTarget = null
   if (gameState.buildings && Array.isArray(gameState.buildings)) {
-    for (const building of gameState.buildings) {
-      if (building.type === 'vehicleWorkshop' && building.owner === gameState.humanPlayer && building.health > 0 &&
-          tileX >= building.x && tileX < building.x + building.width &&
-          tileY >= building.y && tileY < building.y + building.height) {
-        workshopTarget = building
-        break
-      }
-    }
+    workshopTarget = findActiveFriendlyBuildingAtTile(
+      gameState.buildings,
+      tileX,
+      tileY,
+      gameState.humanPlayer,
+      'vehicleWorkshop'
+    )
 
     const hasNotFullyLoadedAmbulances = commandableUnits.some(unit => unit.type === 'ambulance' && unit.medics < 4)
     if (hasNotFullyLoadedAmbulances) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'hospital' && building.owner === gameState.humanPlayer && building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          hospitalTarget = building
-          break
-        }
-      }
+      hospitalTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'hospital'
+      )
     }
 
     const needsGas = commandableUnits.some(u => typeof u.maxGas === 'number' && u.gas < u.maxGas * 0.75)
     if (needsGas) {
-      for (const building of gameState.buildings) {
-        if (building.type === 'gasStation' && building.owner === gameState.humanPlayer && building.health > 0 &&
-            tileX >= building.x && tileX < building.x + building.width &&
-            tileY >= building.y && tileY < building.y + building.height) {
-          gasStationTarget = building
-          break
-        }
-      }
+      gasStationTarget = findActiveFriendlyBuildingAtTile(
+        gameState.buildings,
+        tileX,
+        tileY,
+        gameState.humanPlayer,
+        'gasStation'
+      )
     }
   }
 
