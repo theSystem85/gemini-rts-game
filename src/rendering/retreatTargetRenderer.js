@@ -72,7 +72,7 @@ export class RetreatTargetRenderer {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
           ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'
           ctx.lineWidth = 1
-          ctx.font = '10px Arial'
+          ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
           ctx.textAlign = 'center'
 
           const text = 'RETREAT'

@@ -48,7 +48,7 @@ export class MinimapRenderer {
       minimapCtx.fillStyle = '#000'
       minimapCtx.fillRect(0, 0, minimapLogicalWidth, minimapLogicalHeight)
       minimapCtx.fillStyle = '#fff'
-      minimapCtx.font = '12px Arial'
+      minimapCtx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
       minimapCtx.textAlign = 'center'
       minimapCtx.textBaseline = 'middle'
       minimapCtx.fillText('Generating map…', minimapLogicalWidth / 2, minimapLogicalHeight / 2)
@@ -281,7 +281,7 @@ export class MinimapRenderer {
       minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight)
 
       minimapCtx.fillStyle = '#00ff00'
-      minimapCtx.font = '14px Arial'
+      minimapCtx.font = '14px "Rajdhani", "Arial Narrow", sans-serif'
       minimapCtx.textAlign = 'center'
       minimapCtx.fillText('Loading...', minimapWidth / 2, minimapHeight / 2)
       return
@@ -324,7 +324,7 @@ export class MinimapRenderer {
       window.logger.warn('Failed to draw video frame:', error)
       // Fallback to loading text
       minimapCtx.fillStyle = '#ff0000'
-      minimapCtx.font = '12px Arial'
+      minimapCtx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
       minimapCtx.textAlign = 'center'
       minimapCtx.fillText('Video Error', minimapWidth / 2, minimapHeight / 2)
     }
@@ -382,7 +382,7 @@ export class MinimapRenderer {
       ctx.fillRect(0, 0, minimapWidth, minimapHeight)
 
       ctx.fillStyle = '#f00'
-      ctx.font = '16px Arial'
+      ctx.font = '16px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('RADAR OFFLINE', minimapWidth / 2, minimapHeight / 2)

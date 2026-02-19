@@ -48,7 +48,7 @@ export class RuntimeConfigDialog {
           width: min(680px, calc(100% - 24px));
           max-height: min(85vh, 700px);
           box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+          font-family: 'Rajdhani', 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif;
           display: flex;
           flex-direction: column;
           overflow: hidden;

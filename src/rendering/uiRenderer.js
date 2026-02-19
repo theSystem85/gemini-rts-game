@@ -114,7 +114,7 @@ export class UIRenderer {
       ctx.strokeStyle = '#0000FF'
       ctx.strokeRect(x, y, info.width * TILE_SIZE, info.height * TILE_SIZE)
       ctx.fillStyle = '#FFFFFF'
-      ctx.font = '12px Arial'
+      ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText(info.displayName, x + (info.width * TILE_SIZE) / 2, y + (info.height * TILE_SIZE) / 2)
     })
@@ -178,7 +178,7 @@ export class UIRenderer {
 
         // Draw building name above cursor
         ctx.fillStyle = '#fff'
-        ctx.font = '14px Arial'
+        ctx.font = '14px "Rajdhani", "Arial Narrow", sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText(
           buildingInfo.displayName,
@@ -389,7 +389,7 @@ export class UIRenderer {
         ? 'All enemy buildings destroyed!'
         : 'All your buildings have been destroyed!'
 
-      ctx.font = `bold ${layout.heading.fontSize}px Arial`
+      ctx.font = `bold ${layout.heading.fontSize}px "Rajdhani", "Arial Narrow", sans-serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
 
@@ -403,7 +403,7 @@ export class UIRenderer {
       // Render subtitle (wrapped if needed) below the main title
       const subtitleY = layout.heading.y + layout.heading.fontSize + 8
       const subtitleFontSize = Math.max(12, layout.heading.fontSize * 0.6)
-      ctx.font = `${subtitleFontSize}px Arial`
+      ctx.font = `${subtitleFontSize}px "Rajdhani", "Arial Narrow", sans-serif`
       ctx.fillStyle = '#ccc'
 
       // Wrap subtitle text into lines (don't rely on layout.stats.startY yet)
@@ -440,7 +440,7 @@ export class UIRenderer {
       }
 
       // Render statistics with icons/styling
-      ctx.font = `${layout.stats.fontSize}px Arial`
+      ctx.font = `${layout.stats.fontSize}px "Rajdhani", "Arial Narrow", sans-serif`
       ctx.textBaseline = 'top'
       ctx.fillStyle = '#ddd'
 
@@ -555,7 +555,7 @@ export class UIRenderer {
     ctx.strokeRect(x, y, width, height)
 
     // Button text
-    ctx.font = `bold ${fontSize}px Arial`
+    ctx.font = `bold ${fontSize}px "Rajdhani", "Arial Narrow", sans-serif`
     ctx.fillStyle = textColor
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

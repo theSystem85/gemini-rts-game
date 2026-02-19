@@ -153,7 +153,7 @@ export class HarvesterHUD {
 
     // Draw queue number
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'bold 10px Arial'
+    ctx.font = 'bold 10px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(queueNumber.toString(), x, y)
@@ -173,7 +173,7 @@ export class HarvesterHUD {
     ctx.strokeRect(ctx.canvas.width - 120, 10, 110, 25)
 
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = '12px Arial'
+    ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('Harvester HUD (i)', ctx.canvas.width - 65, 27)
 

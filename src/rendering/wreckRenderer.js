@@ -209,7 +209,7 @@ export class WreckRenderer {
     ctx.stroke()
 
     ctx.fillStyle = '#000'
-    ctx.font = '10px Arial'
+    ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 3)

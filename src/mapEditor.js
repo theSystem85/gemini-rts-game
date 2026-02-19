@@ -589,7 +589,7 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
       ctx.lineWidth = 2
       ctx.strokeRect(screenX, screenY, width * TILE_SIZE, height * TILE_SIZE)
       ctx.fillStyle = '#fff'
-      ctx.font = '12px Arial'
+      ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText(entry.displayName || buildingType, screenX + (width * TILE_SIZE) / 2, screenY - 4)
       ctx.restore()
@@ -638,7 +638,7 @@ export function renderMapEditorOverlay(ctx, scrollOffset) {
     ctx.lineWidth = 2
     ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
     ctx.fillStyle = '#fff'
-    ctx.font = '12px Arial'
+    ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(unitType, screenX + TILE_SIZE / 2, screenY - 4)
     ctx.restore()

@@ -87,7 +87,7 @@ export class PathPlanningRenderer {
       }
 
       ctx.fillStyle = options.textColor || '#000'
-      ctx.font = options.font || '8px Arial'
+      ctx.font = options.font || '8px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(String(idx + 1), screenX, screenY - half / 2 + 2)
@@ -288,7 +288,7 @@ export class PathPlanningRenderer {
 
             // Number
             ctx.fillStyle = '#000'
-            ctx.font = '7px Arial'
+            ctx.font = '7px "Rajdhani", "Arial Narrow", sans-serif'
             ctx.textAlign = 'center'
             ctx.textBaseline = 'middle'
             ctx.fillText(String(i + 1), screenX, screenY)

@@ -417,7 +417,7 @@ export class GameLoop {
         const gameCanvas = this.canvasManager.getGameCanvas()
         gameCtx.fillStyle = '#000'
         gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height)
-        gameCtx.font = '20px Arial'
+        gameCtx.font = '20px "Rajdhani", "Arial Narrow", sans-serif'
         gameCtx.fillStyle = '#fff'
         gameCtx.textAlign = 'center'
         gameCtx.fillText('Loading assets, please wait...', gameCanvas.width / (2 * (window.devicePixelRatio || 1)), gameCanvas.height / (2 * (window.devicePixelRatio || 1)))

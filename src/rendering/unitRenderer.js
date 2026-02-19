@@ -564,7 +564,7 @@ export class UnitRenderer {
     const tooltipText = label
     const fontSize = 9
     ctx.save()
-    ctx.font = `${fontSize}px Arial`
+    ctx.font = `${fontSize}px "Rajdhani", "Arial Narrow", sans-serif`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
 
@@ -1038,7 +1038,7 @@ export class UnitRenderer {
     if (unit.groupNumber) {
       // Use green color if formation mode is active, else default white.
       ctx.fillStyle = unit.formationActive ? 'green' : '#FFF'
-      ctx.font = '10px Arial'
+      ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'left'
       // Position at bottom left of unit rectangle.
       ctx.fillText(
@@ -1090,7 +1090,7 @@ export class UnitRenderer {
         ctx.fillRect(x, y - rectHeight, size, rectHeight)
 
         ctx.fillStyle = '#FFF'
-        ctx.font = '4px Arial'
+        ctx.font = '4px "Rajdhani", "Arial Narrow", sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
@@ -1131,7 +1131,7 @@ export class UnitRenderer {
         ctx.fillRect(x, y - rectHeight, size, rectHeight)
 
         ctx.fillStyle = '#FFF'
-        ctx.font = '4px Arial'
+        ctx.font = '4px "Rajdhani", "Arial Narrow", sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
@@ -1155,7 +1155,7 @@ export class UnitRenderer {
         ctx.fillRect(x, y - rectHeight, size, rectHeight)
 
         ctx.fillStyle = '#FFF'
-        ctx.font = '4px Arial'
+        ctx.font = '4px "Rajdhani", "Arial Narrow", sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
@@ -1182,7 +1182,7 @@ export class UnitRenderer {
       ctx.fillRect(x, y - rectHeight, size, rectHeight)
 
       ctx.fillStyle = '#FFF'
-      ctx.font = '4px Arial'
+      ctx.font = '4px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(letters[role], x + size / 2, y - rectHeight / 2)
@@ -1327,7 +1327,7 @@ export class UnitRenderer {
 
     if (queuePosition !== null) {
       ctx.fillStyle = '#000'
-      ctx.font = '10px Arial'
+      ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(String(queuePosition), indicatorX, indicatorY - halfSize / 3 + 2)
