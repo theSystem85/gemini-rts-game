@@ -32,6 +32,82 @@ import {
 } from './movementCollision.js'
 import { handleStuckUnit } from './movementStuck.js'
 
+const MOVEMENT_SOUND_STOP_FADE_SECONDS = 0.08
+const TANK_ENGINE_LOOP_VOLUME = 0.2
+
+function stopLoopedMovementSound(soundHandle, fadeSeconds = MOVEMENT_SOUND_STOP_FADE_SECONDS) {
+  if (!soundHandle || !audioContext) return
+
+  const { source, gainNode } = soundHandle
+  const stopAt = audioContext.currentTime + Math.max(0, fadeSeconds)
+
+  if (gainNode) {
+    gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+    gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
+    gainNode.gain.linearRampToValueAtTime(0, stopAt)
+  }
+
+  if (source) {
+    try {
+      source.stop(stopAt)
+    } catch (e) {
+      console.error('Error stopping movement loop sound:', e)
+    }
+  }
+}
+
+function shouldPlayTankEngineSound(unit, movement) {
+  if (!unit || !movement) return false
+  if (unit.health <= 0 || unit.destroyed) return false
+  return movement.currentSpeed > MOVEMENT_CONFIG.MIN_SPEED
+}
+
+function beginTankEngineLoop(unit) {
+  if (!unit || unit.engineSound || unit.engineSoundLoading) return
+
+  unit.engineSoundLoading = true
+  const requestId = (unit.engineSoundRequestId || 0) + 1
+  unit.engineSoundRequestId = requestId
+
+  playPositionalSound('tankDriveLoop', unit.x, unit.y, TANK_ENGINE_LOOP_VOLUME, 0, false, { playLoop: true })
+    .then(handle => {
+      unit.engineSoundLoading = false
+      if (!handle) return
+
+      const requestStillValid = unit.engineSoundRequestId === requestId
+      const stillMoving = shouldPlayTankEngineSound(unit, unit.movement)
+      if (!requestStillValid || !stillMoving || unit.engineSound) {
+        stopLoopedMovementSound(handle)
+        return
+      }
+
+      const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
+      const targetGain = TANK_ENGINE_LOOP_VOLUME * volumeFactor * getMasterVolume()
+      if (handle.gainNode) {
+        handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+        handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.08)
+      }
+      if (handle.panner) handle.panner.pan.value = pan
+      unit.engineSound = handle
+    })
+    .catch(error => {
+      unit.engineSoundLoading = false
+      console.error('Error playing tank engine loop:', error)
+    })
+}
+
+function stopTankEngineLoop(unit) {
+  if (!unit) return
+
+  unit.engineSoundRequestId = (unit.engineSoundRequestId || 0) + 1
+  unit.engineSoundLoading = false
+
+  if (unit.engineSound) {
+    stopLoopedMovementSound(unit.engineSound)
+    unit.engineSound = null
+  }
+}
+
 export function checkMineDetonation(unit, tileX, tileY, units, buildings) {
   if (!unit) return
   const mine = getMineAtTile(tileX, tileY)
@@ -606,40 +682,20 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
 
   const isTank = unit.type && unit.type.includes('tank')
   if (isTank) {
-    const moving = movement.currentSpeed > MOVEMENT_CONFIG.MIN_SPEED
-    if (moving) {
+    const shouldPlayEngineLoop = shouldPlayTankEngineSound(unit, movement)
+    if (shouldPlayEngineLoop) {
       if (!unit.engineSound) {
-        playPositionalSound('tankDriveLoop', unit.x, unit.y, 0.2, 0, false, { playLoop: true })
-          .then(handle => {
-            if (!handle) return
-            if (unit.health <= 0 || unit.destroyed) {
-              try {
-                handle.source.stop()
-              } catch (e) {
-                console.error('Error stopping pending engine sound:', e)
-              }
-              return
-            }
-            const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
-            const targetGain = 0.2 * volumeFactor * getMasterVolume()
-            handle.gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-            handle.gainNode.gain.linearRampToValueAtTime(targetGain, audioContext.currentTime + 0.5)
-            if (handle.panner) handle.panner.pan.value = pan
-            unit.engineSound = handle
-          })
+        beginTankEngineLoop(unit)
       } else {
         const { pan, volumeFactor } = calculatePositionalAudio(unit.x, unit.y)
-        const targetGain = 0.2 * volumeFactor * getMasterVolume()
+        const targetGain = TANK_ENGINE_LOOP_VOLUME * volumeFactor * getMasterVolume()
         if (unit.engineSound.panner) unit.engineSound.panner.pan.value = pan
-        unit.engineSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
+        if (unit.engineSound.gainNode) {
+          unit.engineSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
+        }
       }
-    } else if (unit.engineSound) {
-      const { source, gainNode } = unit.engineSound
-      gainNode.gain.cancelScheduledValues(audioContext.currentTime)
-      gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
-      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5)
-      source.stop(audioContext.currentTime + 0.5)
-      unit.engineSound = null
+    } else {
+      stopTankEngineLoop(unit)
     }
   }
 }
@@ -674,6 +730,8 @@ export function stopUnitMovement(unit) {
   unit.movement.isMoving = false
   unit.movement.currentSpeed = 0
 
+  stopTankEngineLoop(unit)
+
   if (unit.path) {
     unit.path = []
   }
@@ -690,6 +748,11 @@ export function cancelUnitMovement(unit) {
   unit.movement.targetVelocity.y = 0
   unit.movement.isMoving = false
   unit.moveTarget = null
+
+  if (unit.engineSound) {
+    stopLoopedMovementSound(unit.engineSound)
+    unit.engineSound = null
+  }
 }
 
 export function resetUnitVelocityForNewPath(unit) {
