@@ -121,8 +121,8 @@ export function updateMobileCategoryToggle(controller, activeTabName) {
   const otherButton = document.querySelector(`.tab-button[data-tab="${otherTab}"]`)
   const otherDisabled = otherButton ? otherButton.classList.contains('disabled') : true
 
-  const currentLabel = activeTab === 'units' ? 'Units' : 'Buildings'
-  const otherLabel = otherTab === 'units' ? 'Units' : 'Buildings'
+  const currentLabel = activeTab === 'units' ? 'UNITS' : 'BUILDINGS'
+  const otherLabel = otherTab === 'units' ? 'UNITS' : 'BUILDINGS'
 
   controller.mobileCategoryToggle.disabled = otherDisabled
   controller.mobileCategoryToggle.tabIndex = otherDisabled ? -1 : 0
