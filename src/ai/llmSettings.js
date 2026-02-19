@@ -19,22 +19,26 @@ export const DEFAULT_LLM_SETTINGS = {
     openai: {
       apiKey: '',
       baseUrl: 'https://api.openai.com/v1',
-      model: ''
+      model: '',
+      riskAccepted: false
     },
     anthropic: {
       apiKey: '',
       baseUrl: 'https://api.anthropic.com',
-      model: ''
+      model: '',
+      riskAccepted: false
     },
     xai: {
       apiKey: '',
       baseUrl: 'https://api.x.ai/v1',
-      model: ''
+      model: '',
+      riskAccepted: false
     },
     ollama: {
       apiKey: '',
       baseUrl: 'http://localhost:11434',
-      model: ''
+      model: '',
+      riskAccepted: false
     }
   }
 }
