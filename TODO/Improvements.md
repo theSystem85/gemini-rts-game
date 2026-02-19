@@ -1,3 +1,4 @@
+- [x] Disable desktop edge auto-scroll by default, stop edge scrolling immediately when cursor leaves the map canvas, and set HUD mode 4 (modern donut) as the default selected-unit HUD mode.
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
 - [x] Keep the in-game default arrow cursor when hovering a selected unit and its HUD, preventing move/blocked cursor overrides on that selected target context.
 - [x] Add tiny hover tooltips for selected-unit HUD segments so each exact hovered element shows its label (fuel, ammo, health, experience, rank stars, commander, loader, gunner, driver).

@@ -198,7 +198,7 @@ export const gameState = {
   runtimeConfigDialogOpen: false,
 
   // Selected unit HUD render mode (legacy, modern, modern-no-border, modern-donut)
-  selectionHudMode: 'modern',
+  selectionHudMode: 'modern-donut',
 
   // Selected unit HUD bar thickness (in px)
   selectionHudBarThickness: 4,

@@ -50,3 +50,5 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 20. Tooltip should only appear when the cursor is over a HUD segment and should remain compact/minimal to avoid obscuring gameplay.
 
 21. When hovering the currently selected unit or any of that selected unit's HUD elements, cursor style must stay on the game's default arrow cursor (no move/blocked/attack cursor override).
+
+18. Default selected-unit HUD mode must be **HUD 4 (modern donut)** on fresh loads before any local storage override.
