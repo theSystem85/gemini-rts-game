@@ -1,3 +1,4 @@
+- [x] Improve sidebar rendering with a subtle professional gradient treatment so the panel feels less flat while preserving readability.
 - [x] Show FPS-overlay LLM token/cost rows only while LLM is enabled, and fix uncapped benchmark chart FPS sampling so final report points no longer collapse to 0 FPS when frame limiter is off.
 - [x] Rework dual FPS/performance widgets: position both below the notification bell without overlap, move frame-limiter control into Settings modal, remap sidebar button to FPS/canvas overlay toggle, and remove LLM cost block from HTML debug widget while keeping LLM stats in the main FPS overlay.
 - [x] Add a sidebar icon button (with tooltip) next to the keyboard-mappings info button to toggle the performance widget directly.
