@@ -6,6 +6,50 @@ import { buildingData } from '../buildings.js'
 import { applyProductionBrush } from './mapEditorControls.js'
 import { attachProductionTooltipHandlers } from './productionTooltip.js'
 
+const mobileLandscapeBuildingLabelMap = {
+  vehicleFactory: 'Vehicle Fab',
+  radarStation: 'Radar',
+  vehicleWorkshop: 'Workshop',
+  ammunitionFactory: 'Ammo Fab',
+  turretGunV1: 'Turret V1',
+  turretGunV2: 'Turret V2',
+  turretGunV3: 'Turret V3'
+}
+
+function updateMobileLandscapeBuildingLabels(controller) {
+  const isMobileLandscape = document.body.classList.contains('mobile-landscape')
+
+  controller.buildingButtons.forEach((button, buildingType) => {
+    const nameElement = button.querySelector('.building-name')
+    if (!nameElement) {
+      return
+    }
+
+    if (!nameElement.dataset.defaultName) {
+      nameElement.dataset.defaultName = nameElement.textContent.trim()
+    }
+
+    if (isMobileLandscape) {
+      nameElement.textContent = mobileLandscapeBuildingLabelMap[buildingType] || nameElement.dataset.defaultName
+      return
+    }
+
+    nameElement.textContent = nameElement.dataset.defaultName
+  })
+}
+
+function attachMobileLandscapeLabelSync(controller) {
+  if (controller.mobileLandscapeLabelSyncAttached) {
+    return
+  }
+
+  document.addEventListener('mobile-landscape-layout-changed', () => {
+    updateMobileLandscapeBuildingLabels(controller)
+  })
+
+  controller.mobileLandscapeLabelSyncAttached = true
+}
+
 function loadButtonImage(button) {
   const img = button.querySelector('img')
   if (img && img.dataset && img.dataset.src && img.src !== img.dataset.src) {
@@ -38,6 +82,7 @@ export function setupAllProductionButtons(controller) {
     controller.updateVehicleButtonStates()
     controller.updateBuildingButtonStates()
     controller.updateMobileCategoryToggle()
+    updateMobileLandscapeBuildingLabels(controller)
     return
   }
 
@@ -52,6 +97,8 @@ export function setupAllProductionButtons(controller) {
   controller.updateVehicleButtonStates()
   controller.updateBuildingButtonStates()
   controller.updateMobileCategoryToggle()
+  updateMobileLandscapeBuildingLabels(controller)
+  attachMobileLandscapeLabelSync(controller)
 
   // Load images for already unlocked buildings/units
   controller.syncTechTreeWithBuildings()
