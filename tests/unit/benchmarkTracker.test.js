@@ -161,13 +161,12 @@ describe('benchmarkTracker.js', () => {
       expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
     })
 
-    it('should ignore invalid frameTime values', () => {
+    it('should normalize near-zero frameTime values instead of dropping frames', () => {
       startBenchmarkSession(10000)
 
-      // Very small frameTime should be ignored
       notifyBenchmarkFrame({ timestamp: 1000, frameTime: 0.00001 })
 
-      expect(updateBenchmarkCountdownAverage).not.toHaveBeenCalled()
+      expect(updateBenchmarkCountdownAverage).toHaveBeenCalled()
     })
 
     it('should ignore non-finite frameTime values', () => {
@@ -202,6 +201,22 @@ describe('benchmarkTracker.js', () => {
       notifyBenchmarkFrame({ timestamp: 1034, frameTime: 16.67 })
 
       expect(updateBenchmarkCountdownAverage).toHaveBeenCalledTimes(3)
+    })
+
+
+    it('should synthesize monotonic benchmark timestamps when uncapped loop provides duplicate timestamps', async() => {
+      const promise = startBenchmarkSession(16, 8)
+      gameState.benchmarkActive = true
+
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 0 })
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 0 })
+      notifyBenchmarkFrame({ timestamp: 1000, frameTime: 0 })
+
+      const result = await promise
+
+      expect(result.frames).toBeGreaterThan(0)
+      expect(result.intervalAverages.length).toBeGreaterThan(0)
+      expect(result.intervalAverages.some(point => point.fps > 0)).toBe(true)
     })
 
     it('should track min and max fps across frames', async() => {

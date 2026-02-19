@@ -88,6 +88,7 @@ export function resetGameState() {
   gameState.gamePaused = false
   gameState.gameOver = false
   gameState.mapEditMode = false
+  gameState.frameLimiterEnabled = true
 
   // Reset scroll offset
   gameState.scrollOffset = { x: 0, y: 0 }

@@ -155,6 +155,9 @@ export const gameState = {
   // Performance dialog visibility toggle
   performanceVisible: false,
 
+  // Performance measurement frame limiter toggle (default ON = refresh-rate capped)
+  frameLimiterEnabled: true,
+
   // LLM usage tracking (per session)
   llmUsage: {
     totalTokens: 0,

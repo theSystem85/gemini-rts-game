@@ -2,6 +2,7 @@
 import { gameState } from '../gameState.js'
 import { notifyBenchmarkFrame } from '../benchmark/benchmarkTracker.js'
 import { getNetworkStats, isLockstepEnabled } from '../network/gameCommandSync.js'
+import { getLlmSettings } from '../ai/llmSettings.js'
 
 export class FPSDisplay {
   constructor() {
@@ -35,6 +36,8 @@ export class FPSDisplay {
     this.frameTimeEl = document.getElementById('frameTimeValue')
     this.frameTimeMinEl = document.getElementById('frameTimeMin')
     this.frameTimeMaxEl = document.getElementById('frameTimeMax')
+    this.fpsLlmTokensEl = document.getElementById('fpsLlmTokens')
+    this.fpsLlmSpendEl = document.getElementById('fpsLlmSpend')
 
     // Network stats elements
     this.networkStatsContainer = document.getElementById('networkStatsContainer')
@@ -121,9 +124,11 @@ export class FPSDisplay {
 
     if (gameState.fpsVisible) {
       if (this.fpsValueEl) {
-        this.fpsValueEl.textContent = `FPS: ${this.fps}`
+        const modeLabel = gameState.frameLimiterEnabled !== false ? 'capped' : 'uncapped'
+        this.fpsValueEl.textContent = `FPS: ${this.fps} (${modeLabel})`
       } else {
-        this.fpsElement.textContent = `FPS: ${this.fps}`
+        const modeLabel = gameState.frameLimiterEnabled !== false ? 'capped' : 'uncapped'
+        this.fpsElement.textContent = `FPS: ${this.fps} (${modeLabel})`
       }
 
       if (this.frameTimeEl) {
@@ -134,6 +139,24 @@ export class FPSDisplay {
       }
       if (this.frameTimeMaxEl) {
         this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
+      }
+
+      const llmSettings = getLlmSettings()
+      const llmEnabled = Boolean(llmSettings?.strategic?.enabled || llmSettings?.commentary?.enabled)
+      if (this.fpsLlmTokensEl) {
+        this.fpsLlmTokensEl.style.display = llmEnabled ? 'block' : 'none'
+      }
+      if (this.fpsLlmSpendEl) {
+        this.fpsLlmSpendEl.style.display = llmEnabled ? 'block' : 'none'
+      }
+      if (llmEnabled) {
+        const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
+        if (this.fpsLlmTokensEl) {
+          this.fpsLlmTokensEl.textContent = `Tokens: ${Math.round(llmUsage.totalTokens || 0)}`
+        }
+        if (this.fpsLlmSpendEl) {
+          this.fpsLlmSpendEl.textContent = `Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}`
+        }
       }
 
       // Update network stats if multiplayer is active
