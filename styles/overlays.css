@@ -439,6 +439,65 @@ body.config-modal-open {
   flex: 1;
 }
 
+
+.config-modal__field--compact {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.config-modal__api-key-security {
+  position: relative;
+}
+
+.config-modal__api-key-security-note {
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #ffdca0;
+  background: rgba(58, 19, 15, 0.45);
+  border: 1px solid rgba(255, 142, 110, 0.45);
+  border-radius: 6px;
+  border-left: 3px solid rgba(255, 120, 90, 0.8);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(-2px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, max-height 0.25s ease, transform 0.2s ease;
+}
+
+.config-modal__api-key-security:hover .config-modal__api-key-security-note,
+.config-modal__api-key-security:focus-within .config-modal__api-key-security-note,
+.config-modal__api-key-security-note.is-visible {
+  opacity: 1;
+  max-height: 460px;
+  overflow-y: auto;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.config-modal__api-key-security-note strong {
+  color: #ffd79c;
+}
+
+.config-modal__api-key-security-note ul {
+  margin: 8px 0 10px 18px;
+  padding: 0;
+}
+
+.config-modal__api-key-security-note li + li {
+  margin-top: 6px;
+}
+
+.config-modal__api-key-security-note a {
+  color: #8ec6ff;
+}
+
+.config-modal__api-key-security-note code {
+  color: #ffe4bf;
+}
+
 .config-modal__field select,
 .config-modal__field input,
 .config-modal__field textarea {

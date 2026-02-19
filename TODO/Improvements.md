@@ -2,7 +2,11 @@
 - [x] Rework dual FPS/performance widgets: position both below the notification bell without overlap, move frame-limiter control into Settings modal, remap sidebar button to FPS/canvas overlay toggle, and remove LLM cost block from HTML debug widget while keeping LLM stats in the main FPS overlay.
 - [x] Add a sidebar icon button (with tooltip) next to the keyboard-mappings info button to toggle the performance widget directly.
 - [x] Add a performance-widget frame limiter toggle (default ON) and support uncapped FPS measurement by decoupling scheduler from vsync for bare-performance profiling.
+- [x] Disable desktop edge auto-scroll by default, stop edge scrolling immediately when cursor leaves the map canvas, and set HUD mode 4 (modern donut) as the default selected-unit HUD mode.
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
+- [x] Fix HUD bar hover tooltips across all HUD modes (legacy/modern/borderless/donut) using geometry-aware hit zones that stay robust to HUD style/thickness changes and future mode extensions.
+- [x] Keep the in-game default arrow cursor when hovering a selected unit and its HUD, preventing move/blocked cursor overrides on that selected target context.
+- [x] Add tiny hover tooltips for selected-unit HUD segments so each exact hovered element shows its label (fuel, ammo, health, experience, rank stars, commander, loader, gunner, driver).
 - [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.
 - [x] README follow-up: add section icons and document `netlify dev` as an optional local multiplayer test path when Netlify CLI is installed globally.
 - [x] Add desktop + mobile screenshots to README, converting docs images to WebP (quality 85) and removing the original PNGs.
@@ -14,6 +18,7 @@
 - [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
 - [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.
 ## Improvements
+- [x] Expand OpenAI API key settings with security-critical disclosure (hover/focus), dedicated limited-permission key guidance, localStorage/XSS risk warning, official OpenAI safety link, low-cost model recommendation, and explicit at-your-own-risk opt-in checkbox before key entry.
 - [x] Move the mobile landscape notification bell icon from top-right to the top-left safe-area position.
 - [x] Temporarily lock LLM settings to OpenAI only: remove invalid remote cost URL usage, keep other provider sections visible but collapsed, and show a "coming soon!" hint for Anthropic/xAI/Ollama.
 - [x] Rename all in-repo and in-game title variants to Code for Battle.
@@ -728,3 +733,5 @@
 - [x] Ensure all sound files are loaded on demand only (no initial browser-load audio prefetch/preload); keep playback lazy-loaded at first use. 
 - [x] Added npm script 'test:e2e:file' to run specific E2E test files in headless mode
 - [x] Improve multiplayer network stability with heartbeat-based responsiveness checks, forced host/client pause while reconnecting, delayed AI takeover fallback, and reconnect timer visibility for hosts and clients (2-4 player compatible).
+- [x] Mobile landscape production category toggle now uses compact uppercase labels so "BUILDINGS" fits reliably, and building button labels use short forms only in mobile landscape (e.g., Vehicle Fab, Radar, Ammo Fab, Turret V1/V2/V3).
+- [x] Follow-up mobile landscape tweak: keep the BUILDINGS/UNITS toggle button position unchanged but left-align the toggle label text and reduce label font-size by 1px to avoid clipping.

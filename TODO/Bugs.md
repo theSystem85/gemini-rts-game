@@ -1,4 +1,6 @@
 ## Bugs
+- [x] Fix tank movement loop audio lifecycle: stop immediately on halt and prevent same-unit overlapping loop instances that caused runaway loudness.
+- [x] Ensure movement loop audio (engine/rotor) fades out immediately when a unit stops moving.
 - [x] ✅ Fix `npm run lint:fix:changed` filename truncation bug where root-level unstaged files could lose their first character (e.g. `playwright.config.js` became `laywright.config.js`) due to trimming git porcelain status lines before slicing.
 - [x] ✅ Fix multiplayer remote-party economy sync: remote human parties now receive host-authoritative money updates (harvester income + host `give [party] [amount]` cheats) via snapshot sync.
 - [x] ✅ When the number of players is changed in the map settings and the "shuffle map" button or the restart game button is pressed, ensure that the multiplayer section of the sidebar is adjusted to show the correct number of players.
@@ -37,6 +39,7 @@
 - [x] Tutorial minimize button does not collapse the tutorial overlay on mobile; ensure the button toggles a minimized state.
 - [x] Avoid AudioContext start warnings by resuming audio only after a user gesture.
 - [x] Tutorial continue button loses enabled state after minimize/restore; ensure state is preserved.
+- [x] Ensure tutorial demo mouse indicator is hidden whenever tutorial is minimized, skipped, or completed so it never stays visible in the top-left corner.
 - [x] Restore a voice on/off toggle inside the tutorial window.
 - [x] Skip tutorial should hide the overlay and dock until re-enabled in settings.
 - [x] Continue button should unlock with a reward animation only after step goals are met.

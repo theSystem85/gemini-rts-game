@@ -451,7 +451,7 @@ export function setDesktopEdgeAutoscrollSpeed(value) {
 }
 
 // Desktop edge auto-scroll enabled toggle
-export let DESKTOP_EDGE_AUTOSCROLL_ENABLED = true
+export let DESKTOP_EDGE_AUTOSCROLL_ENABLED = false
 
 export function setDesktopEdgeAutoscrollEnabled(value) {
   DESKTOP_EDGE_AUTOSCROLL_ENABLED = Boolean(value)
