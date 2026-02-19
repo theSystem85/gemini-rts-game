@@ -1,4 +1,7 @@
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
+- [x] Fix HUD bar hover tooltips across all HUD modes (legacy/modern/borderless/donut) using geometry-aware hit zones that stay robust to HUD style/thickness changes and future mode extensions.
+- [x] Keep the in-game default arrow cursor when hovering a selected unit and its HUD, preventing move/blocked cursor overrides on that selected target context.
+- [x] Add tiny hover tooltips for selected-unit HUD segments so each exact hovered element shows its label (fuel, ammo, health, experience, rank stars, commander, loader, gunner, driver).
 - [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.
 - [x] README follow-up: add section icons and document `netlify dev` as an optional local multiplayer test path when Netlify CLI is installed globally.
 - [x] Add desktop + mobile screenshots to README, converting docs images to WebP (quality 85) and removing the original PNGs.
