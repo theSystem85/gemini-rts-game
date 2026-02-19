@@ -5,6 +5,7 @@ import { getCurrentGame, mapGrid, units } from '../main.js'
 import { updateBenchmarkCountdownAverage } from '../ui/benchmarkModal.js'
 
 const FRAME_TIME_MIN_THRESHOLD = 0.0001
+const FALLBACK_FRAME_TIME_MS = 1000 / 60
 const CAMERA_RETARGET_INTERVAL_MS = 5000
 const CAMERA_EASE_DURATION_MS = 1500
 const COMBAT_DISTANCE_THRESHOLD = TILE_SIZE * 10
@@ -246,23 +247,31 @@ function finalizeSession(session, finalTimestamp = null) {
 }
 
 export function notifyBenchmarkFrame({ timestamp, frameTime }) {
-  if (!activeSession || !Number.isFinite(frameTime) || frameTime < FRAME_TIME_MIN_THRESHOLD) {
+  if (!activeSession || !Number.isFinite(timestamp) || !Number.isFinite(frameTime)) {
     return
   }
 
   const session = activeSession
+  const normalizedFrameTime = frameTime >= FRAME_TIME_MIN_THRESHOLD
+    ? frameTime
+    : (session.lastFrameTime || FALLBACK_FRAME_TIME_MS)
+
+  const effectiveTimestamp = Number.isFinite(session.lastFrameTimestamp) && timestamp <= session.lastFrameTimestamp
+    ? session.lastFrameTimestamp + normalizedFrameTime
+    : timestamp
 
   if (!session.startTime) {
-    session.startTime = timestamp
-    session.intervalStart = timestamp
+    session.startTime = effectiveTimestamp
+    session.intervalStart = effectiveTimestamp
     session.lastIntervalFrameCount = 0
   }
 
-  session.lastFrameTimestamp = timestamp
+  session.lastFrameTimestamp = effectiveTimestamp
+  session.lastFrameTime = normalizedFrameTime
 
-  updateBenchmarkCameraFocus(timestamp)
+  updateBenchmarkCameraFocus(effectiveTimestamp)
 
-  const fps = frameTime > 0 ? 1000 / frameTime : 0
+  const fps = normalizedFrameTime > 0 ? 1000 / normalizedFrameTime : 0
   session.frameCount += 1
   session.fpsSum += fps
   session.minFps = Math.min(session.minFps, fps)
@@ -271,7 +280,7 @@ export function notifyBenchmarkFrame({ timestamp, frameTime }) {
   const runningAverage = session.frameCount > 0 ? session.fpsSum / session.frameCount : 0
   updateBenchmarkCountdownAverage(runningAverage)
 
-  const intervalElapsed = timestamp - session.intervalStart
+  const intervalElapsed = effectiveTimestamp - session.intervalStart
   if (intervalElapsed >= session.intervalDuration) {
     const framesInInterval = session.frameCount - session.lastIntervalFrameCount
     const intervalFps = framesInInterval > 0 && intervalElapsed > 0
@@ -279,16 +288,16 @@ export function notifyBenchmarkFrame({ timestamp, frameTime }) {
       : 0
 
     session.intervalAverages.push({
-      time: (timestamp - session.startTime) / 1000,
+      time: (effectiveTimestamp - session.startTime) / 1000,
       fps: intervalFps
     })
 
-    session.intervalStart = timestamp
+    session.intervalStart = effectiveTimestamp
     session.lastIntervalFrameCount = session.frameCount
   }
 
-  if (timestamp - session.startTime >= session.durationMs) {
-    finalizeSession(session, timestamp)
+  if (effectiveTimestamp - session.startTime >= session.durationMs) {
+    finalizeSession(session, effectiveTimestamp)
   }
 }
 
@@ -313,6 +322,7 @@ export function startBenchmarkSession(durationMs = 60000, intervalMs = 1000) {
     maxFps: 0,
     lastIntervalFrameCount: 0,
     intervalAverages: [],
+    lastFrameTime: null,
     resolve
   }
 

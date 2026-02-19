@@ -2,6 +2,7 @@
 import { gameState } from '../gameState.js'
 import { notifyBenchmarkFrame } from '../benchmark/benchmarkTracker.js'
 import { getNetworkStats, isLockstepEnabled } from '../network/gameCommandSync.js'
+import { getLlmSettings } from '../ai/llmSettings.js'
 
 export class FPSDisplay {
   constructor() {
@@ -140,12 +141,22 @@ export class FPSDisplay {
         this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
       }
 
-      const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
+      const llmSettings = getLlmSettings()
+      const llmEnabled = Boolean(llmSettings?.strategic?.enabled || llmSettings?.commentary?.enabled)
       if (this.fpsLlmTokensEl) {
-        this.fpsLlmTokensEl.textContent = `Tokens: ${Math.round(llmUsage.totalTokens || 0)}`
+        this.fpsLlmTokensEl.style.display = llmEnabled ? 'block' : 'none'
       }
       if (this.fpsLlmSpendEl) {
-        this.fpsLlmSpendEl.textContent = `Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}`
+        this.fpsLlmSpendEl.style.display = llmEnabled ? 'block' : 'none'
+      }
+      if (llmEnabled) {
+        const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
+        if (this.fpsLlmTokensEl) {
+          this.fpsLlmTokensEl.textContent = `Tokens: ${Math.round(llmUsage.totalTokens || 0)}`
+        }
+        if (this.fpsLlmSpendEl) {
+          this.fpsLlmSpendEl.textContent = `Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}`
+        }
       }
 
       // Update network stats if multiplayer is active
