@@ -46,6 +46,139 @@ export class CursorManager {
     this.rangeCursorElements = this.createRangeCursorElements()
   }
 
+  isPointInsideRect(x, y, rect) {
+    if (!rect) return false
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+  }
+
+  getSelectedHudBounds(centerX, centerY) {
+    const hudPadding = 6
+    const halfHudSize = (TILE_SIZE / 2) + hudPadding
+    return {
+      left: centerX - halfHudSize,
+      right: centerX + halfHudSize,
+      top: centerY - halfHudSize,
+      bottom: centerY + halfHudSize,
+      width: halfHudSize * 2,
+      height: halfHudSize * 2
+    }
+  }
+
+  getSelectionHudBarThickness() {
+    const parsed = parseInt(gameState.selectionHudBarThickness, 10)
+    if (!Number.isFinite(parsed)) {
+      return 4
+    }
+    return Math.max(1, Math.min(8, parsed))
+  }
+
+  getSelectionHudMode() {
+    return gameState.selectionHudMode || 'modern'
+  }
+
+  isCursorOverSelectedUnitOrHud(worldX, worldY, selectedUnits) {
+    if (!Array.isArray(selectedUnits) || selectedUnits.length === 0) {
+      return false
+    }
+
+    const barThickness = this.getSelectionHudBarThickness()
+    const barSpan = TILE_SIZE * 0.75
+    const hudMode = this.getSelectionHudMode()
+
+    for (const unit of selectedUnits) {
+      if (!unit || unit.isBuilding || unit.health <= 0) continue
+      if (typeof unit.x !== 'number' || typeof unit.y !== 'number') continue
+
+      const altitudeLift = (unit.type === 'apache' && unit.altitude) ? unit.altitude * 0.4 : 0
+      const centerX = unit.x + TILE_SIZE / 2
+      const centerY = unit.y + TILE_SIZE / 2 - altitudeLift
+
+      const unitBounds = {
+        left: unit.x,
+        right: unit.x + TILE_SIZE,
+        top: unit.y,
+        bottom: unit.y + TILE_SIZE
+      }
+      if (this.isPointInsideRect(worldX, worldY, unitBounds)) {
+        return true
+      }
+
+      const hudBounds = this.getSelectedHudBounds(centerX, centerY)
+      if (this.isPointInsideRect(worldX, worldY, hudBounds)) {
+        return true
+      }
+
+      if (hudMode !== 'modern-donut') {
+        const horizontalLeft = centerX - (barSpan / 2)
+        const horizontalRight = centerX + (barSpan / 2)
+        const verticalTop = centerY - (barSpan / 2)
+        const verticalBottom = centerY + (barSpan / 2)
+
+        const topBar = {
+          left: horizontalLeft,
+          right: horizontalRight,
+          top: hudBounds.top - (barThickness / 2),
+          bottom: hudBounds.top + (barThickness / 2)
+        }
+        const bottomBar = {
+          left: horizontalLeft,
+          right: horizontalRight,
+          top: hudBounds.bottom - (barThickness / 2),
+          bottom: hudBounds.bottom + (barThickness / 2)
+        }
+        const leftBar = {
+          left: hudBounds.left - (barThickness / 2),
+          right: hudBounds.left + (barThickness / 2),
+          top: verticalTop,
+          bottom: verticalBottom
+        }
+        const rightBar = {
+          left: hudBounds.right - (barThickness / 2),
+          right: hudBounds.right + (barThickness / 2),
+          top: verticalTop,
+          bottom: verticalBottom
+        }
+
+        if (this.isPointInsideRect(worldX, worldY, topBar) ||
+            this.isPointInsideRect(worldX, worldY, bottomBar) ||
+            this.isPointInsideRect(worldX, worldY, leftBar) ||
+            this.isPointInsideRect(worldX, worldY, rightBar)) {
+          return true
+        }
+      } else {
+        const donutRadius = (Math.min(hudBounds.width, hudBounds.height) / 2) + 2
+        const ringHalf = Math.max(1, (barThickness - 2) / 2)
+        const distance = Math.hypot(worldX - centerX, worldY - centerY)
+        if (Math.abs(distance - donutRadius) <= ringHalf + 1) {
+          return true
+        }
+      }
+
+      if (unit.type !== 'harvester' && unit.level > 0) {
+        const starSize = 6
+        const starSpacing = 8
+        const totalWidth = (unit.level * starSpacing) - (starSpacing - starSize)
+        const startX = (centerX - totalWidth / 2) + (hudMode === 'modern-donut' ? 2 : 0)
+        const starY = hudMode === 'legacy'
+          ? unit.y - 20
+          : hudMode === 'modern-donut'
+            ? hudBounds.top - 12
+            : hudBounds.top - 3
+        const starBounds = {
+          left: startX - 1,
+          right: startX + totalWidth + 1,
+          top: starY - (starSize / 2) - 1,
+          bottom: starY + (starSize / 2) + 1
+        }
+        if (this.isPointInsideRect(worldX, worldY, starBounds)) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
   createRangeCursorElements() {
     if (typeof document === 'undefined') {
       return null
@@ -238,6 +371,12 @@ export class CursorManager {
     // Calculate mouse position in world coordinates
     const worldX = x - rect.left + gameState.scrollOffset.x
     const worldY = y - rect.top + gameState.scrollOffset.y
+
+    if (this.isCursorOverSelectedUnitOrHud(worldX, worldY, selectedUnits)) {
+      setCursor('default')
+      this.updateRangeCursorDisplay(rangeCursorPosition, false)
+      return
+    }
 
     // Update global cursor position for other systems like cheats
     gameState.cursorX = worldX

@@ -49,3 +49,4 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 19. Tooltip labels must map precisely to HUD parts: `health`, `fuel`, `ammo`, `experience`, `rank stars`, and crew role markers (`commander`, `loader`, `gunner`, `driver`).
 20. Tooltip should only appear when the cursor is over a HUD segment and should remain compact/minimal to avoid obscuring gameplay.
 
+21. When hovering the currently selected unit or any of that selected unit's HUD elements, cursor style must stay on the game's default arrow cursor (no move/blocked/attack cursor override).
