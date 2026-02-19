@@ -329,9 +329,7 @@ class TutorialSystem {
       this.overlay.hidden = false
       this.overlay.classList.remove('tutorial-overlay--minimized')
     }
-    if (this.cursor) {
-      this.cursor.hidden = false
-    }
+    this.syncCursorVisibility()
     // Always hide dock button when tutorial overlay is visible
     if (this.dockButton) {
       this.dockButton.hidden = true
@@ -343,9 +341,7 @@ class TutorialSystem {
     if (this.overlay) {
       this.overlay.hidden = true
     }
-    if (this.cursor) {
-      this.cursor.hidden = true
-    }
+    this.syncCursorVisibility()
     if (this.dockButton) {
       this.dockButton.hidden = true
     }
@@ -520,6 +516,7 @@ class TutorialSystem {
 
   toggleMinimize() {
     this.minimized = !this.minimized
+    this.syncCursorVisibility()
 
     if (this.minimized) {
       // Minimizing: animate card out, then show dock button
@@ -565,6 +562,11 @@ class TutorialSystem {
     }
 
     this.renderStep(this.steps[this.stepIndex])
+  }
+
+  syncCursorVisibility() {
+    if (!this.cursor) return
+    this.cursor.hidden = !this.active || this.minimized
   }
 
   updateContinueState(step) {

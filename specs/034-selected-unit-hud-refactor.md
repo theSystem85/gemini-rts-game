@@ -53,3 +53,5 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 22. Bar tooltips must work in all existing HUD modes (legacy, modern bordered, modern borderless, modern donut), not only for crew markers.
 23. Tooltip hit-testing must derive from HUD geometry (bar thickness/span/gaps) so style tweaks do not break hover detection.
 24. Implementation should be extensible for additional HUD modes by centralizing mode-aware hit zone helpers.
+
+18. Default selected-unit HUD mode must be **HUD 4 (modern donut)** on fresh loads before any local storage override.

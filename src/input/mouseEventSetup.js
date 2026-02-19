@@ -110,6 +110,16 @@ export function setupMouseEvents(handler, gameCanvas, units, factories, mapGrid,
     if (handler.requestRenderFrame) handler.requestRenderFrame()
   }, { passive: true })
 
+
+  gameCanvas.addEventListener('mouseleave', () => {
+    const edgeScrollState = gameState.desktopEdgeScroll
+    if (edgeScrollState) {
+      edgeScrollState.overCanvas = false
+      edgeScrollState.edgeHoverStart = null
+      edgeScrollState.lastAutoScrollTime = null
+    }
+  })
+
   gameCanvas.addEventListener('mouseleave', () => {
     // Only hide the LLM queue tooltip if no enemy building is currently selected.
     // Without this guard the tooltip disappears as soon as the pointer enters the
