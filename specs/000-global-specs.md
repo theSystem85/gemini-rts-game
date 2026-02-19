@@ -93,6 +93,7 @@ Ground and air movement logic is split across modular files to keep each under 1
 - Startup code must not prefetch or preload the full sound library.
 - Runtime audio caching is allowed after first use to avoid repeat network fetches.
 - Looped movement audio must fade out immediately (short sub-0.1s fade) when the owning unit stops moving or movement is canceled.
+- Each unit may own at most one active movement loop at a time; async sound-start paths must guard against duplicate per-unit loop playback during loading.
 
 ## Licensing
 
