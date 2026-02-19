@@ -37,6 +37,7 @@
 - [x] Tutorial minimize button does not collapse the tutorial overlay on mobile; ensure the button toggles a minimized state.
 - [x] Avoid AudioContext start warnings by resuming audio only after a user gesture.
 - [x] Tutorial continue button loses enabled state after minimize/restore; ensure state is preserved.
+- [x] Ensure tutorial demo mouse indicator is hidden whenever tutorial is minimized, skipped, or completed so it never stays visible in the top-left corner.
 - [x] Restore a voice on/off toggle inside the tutorial window.
 - [x] Skip tutorial should hide the overlay and dock until re-enabled in settings.
 - [x] Continue button should unlock with a reward animation only after step goals are met.
