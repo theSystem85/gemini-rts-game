@@ -45,3 +45,5 @@ Refactor the selected-unit HUD to improve readability and reduce occlusion of th
 16. The settings HUD preview must use a real **rocket tank** unit image and match in-map HUD rendering behavior for HUD modes 1 and 2.
 17. In HUD mode 4, shift XP stars further upward and slightly right so they center better with the top crew indicator.
 
+
+18. Default selected-unit HUD mode must be **HUD 4 (modern donut)** on fresh loads before any local storage override.
