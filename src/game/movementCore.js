@@ -32,6 +32,29 @@ import {
 } from './movementCollision.js'
 import { handleStuckUnit } from './movementStuck.js'
 
+const MOVEMENT_SOUND_STOP_FADE_SECONDS = 0.08
+
+function stopLoopedMovementSound(soundHandle, fadeSeconds = MOVEMENT_SOUND_STOP_FADE_SECONDS) {
+  if (!soundHandle || !audioContext) return
+
+  const { source, gainNode } = soundHandle
+  const stopAt = audioContext.currentTime + Math.max(0, fadeSeconds)
+
+  if (gainNode) {
+    gainNode.gain.cancelScheduledValues(audioContext.currentTime)
+    gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
+    gainNode.gain.linearRampToValueAtTime(0, stopAt)
+  }
+
+  if (source) {
+    try {
+      source.stop(stopAt)
+    } catch (e) {
+      console.error('Error stopping movement loop sound:', e)
+    }
+  }
+}
+
 export function checkMineDetonation(unit, tileX, tileY, units, buildings) {
   if (!unit) return
   const mine = getMineAtTile(tileX, tileY)
@@ -634,11 +657,7 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
         unit.engineSound.gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.05)
       }
     } else if (unit.engineSound) {
-      const { source, gainNode } = unit.engineSound
-      gainNode.gain.cancelScheduledValues(audioContext.currentTime)
-      gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime)
-      gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5)
-      source.stop(audioContext.currentTime + 0.5)
+      stopLoopedMovementSound(unit.engineSound)
       unit.engineSound = null
     }
   }
@@ -674,6 +693,11 @@ export function stopUnitMovement(unit) {
   unit.movement.isMoving = false
   unit.movement.currentSpeed = 0
 
+  if (unit.engineSound) {
+    stopLoopedMovementSound(unit.engineSound)
+    unit.engineSound = null
+  }
+
   if (unit.path) {
     unit.path = []
   }
@@ -690,6 +714,11 @@ export function cancelUnitMovement(unit) {
   unit.movement.targetVelocity.y = 0
   unit.movement.isMoving = false
   unit.moveTarget = null
+
+  if (unit.engineSound) {
+    stopLoopedMovementSound(unit.engineSound)
+    unit.engineSound = null
+  }
 }
 
 export function resetUnitVelocityForNewPath(unit) {
