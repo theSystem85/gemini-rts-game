@@ -35,6 +35,8 @@ export class FPSDisplay {
     this.frameTimeEl = document.getElementById('frameTimeValue')
     this.frameTimeMinEl = document.getElementById('frameTimeMin')
     this.frameTimeMaxEl = document.getElementById('frameTimeMax')
+    this.fpsLlmTokensEl = document.getElementById('fpsLlmTokens')
+    this.fpsLlmSpendEl = document.getElementById('fpsLlmSpend')
 
     // Network stats elements
     this.networkStatsContainer = document.getElementById('networkStatsContainer')
@@ -136,6 +138,14 @@ export class FPSDisplay {
       }
       if (this.frameTimeMaxEl) {
         this.frameTimeMaxEl.textContent = `Max: ${this.maxFrameTime.toFixed(1)} ms`
+      }
+
+      const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
+      if (this.fpsLlmTokensEl) {
+        this.fpsLlmTokensEl.textContent = `Tokens: ${Math.round(llmUsage.totalTokens || 0)}`
+      }
+      if (this.fpsLlmSpendEl) {
+        this.fpsLlmSpendEl.textContent = `Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}`
       }
 
       // Update network stats if multiplayer is active

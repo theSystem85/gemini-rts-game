@@ -1,3 +1,4 @@
+- [x] Rework dual FPS/performance widgets: position both below the notification bell without overlap, move frame-limiter control into Settings modal, remap sidebar button to FPS/canvas overlay toggle, and remove LLM cost block from HTML debug widget while keeping LLM stats in the main FPS overlay.
 - [x] Add a sidebar icon button (with tooltip) next to the keyboard-mappings info button to toggle the performance widget directly.
 - [x] Add a performance-widget frame limiter toggle (default ON) and support uncapped FPS measurement by decoupling scheduler from vsync for bare-performance profiling.
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.

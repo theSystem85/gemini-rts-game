@@ -3,7 +3,7 @@
 /* FPS Display Overlay */
 .fps-overlay {
   position: absolute;
-  top: 10px;
+  top: 58px;
   right: 10px;
   background: rgba(0, 0, 0, 0.7);
   color: #00ff00;
@@ -61,7 +61,7 @@
 /* Performance Dialog */
 .performance-dialog {
   position: absolute;
-  top: 60px;
+  top: 220px;
   right: 10px;
   width: 260px;
   max-height: 95vh;
@@ -94,40 +94,7 @@
 }
 
 
-.performance-dialog .perf-frame-limiter {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 6px;
-  font-size: 11px;
-  user-select: none;
-}
 
-.performance-dialog .perf-frame-limiter input {
-  margin: 0;
-}
-
-.perf-llm-summary {
-  margin-bottom: 8px;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-}
-
-.perf-llm-summary__title {
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #84d6ff;
-}
-
-.perf-llm-summary__row {
-  font-size: 12px;
-  margin-bottom: 2px;
-}
 
 /* Map Settings Menu */
 #mapSettingsMenu {
@@ -199,6 +166,19 @@ body.config-modal-open {
 .config-modal__close:hover,
 .config-modal__close:focus {
   color: #ffcc66;
+}
+
+.config-modal__checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #c7d2de;
+  font-size: 13px;
+}
+
+.config-modal__checkbox-row input {
+  margin: 0;
 }
 
 .config-modal__body {

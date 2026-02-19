@@ -8,7 +8,6 @@ import { cancelUnitMovement } from '../../src/game/unifiedMovement.js'
 import { broadcastUnitStop } from '../../src/network/gameCommandSync.js'
 import { gameRandom } from '../../src/utils/gameRandom.js'
 import { KEYBINDING_CONTEXTS } from '../../src/input/keybindings.js'
-import { performanceDialog } from '../../src/ui/performanceDialog.js'
 import { TILE_SIZE } from '../../src/config.js'
 
 vi.mock('../../src/sound.js', () => ({
@@ -124,7 +123,7 @@ describe('KeyboardHandler', () => {
   })
 
 
-  it('binds sidebar performance widget button to performance dialog toggle', () => {
+  it('binds sidebar performance widget button to FPS overlay toggle', () => {
     document.body.innerHTML = '<button id="performanceWidgetBtn" type="button"></button>'
     handler = new KeyboardHandler()
     handler.showNotification = vi.fn()
@@ -134,7 +133,7 @@ describe('KeyboardHandler', () => {
 
     document.getElementById('performanceWidgetBtn').click()
 
-    expect(performanceDialog.toggle).toHaveBeenCalledTimes(1)
+    expect(gameState.fpsVisible).toBe(true)
     expect(playSound).toHaveBeenCalledWith('confirmed', 0.5)
   })
 

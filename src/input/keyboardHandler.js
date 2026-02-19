@@ -140,7 +140,7 @@ export class KeyboardHandler {
       }
       if (keybindingManager.matchesKeyboardAction(e, 'toggle-performance', kbContext)) {
         e.preventDefault()
-        this.handlePerformanceToggle()
+        this.handleFpsDisplayToggle()
         return
       }
       if (keybindingManager.matchesKeyboardAction(e, 'toggle-waypoints', kbContext)) {
@@ -412,7 +412,7 @@ export class KeyboardHandler {
     const performanceWidgetBtn = document.getElementById('performanceWidgetBtn')
     if (performanceWidgetBtn) {
       performanceWidgetBtn.addEventListener('click', () => {
-        this.handlePerformanceToggle()
+        this.handleFpsDisplayToggle()
       })
     }
   }

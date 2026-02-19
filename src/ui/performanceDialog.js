@@ -11,10 +11,6 @@ class PerformanceDialog {
           <button id="perfSortName">Name</button>
           <button id="perfSortDuration">Avg</button>
           <button id="perfReset">Reset</button>
-          <label class="perf-frame-limiter">
-            <input id="perfFrameLimiter" type="checkbox" checked>
-            Frame limiter
-          </label>
         </div>
         <div id="perfContent"></div>
       `
@@ -30,13 +26,6 @@ class PerformanceDialog {
       document.getElementById('perfReset').addEventListener('click', () => {
         this.resetStatistics()
       })
-      const frameLimiterInput = document.getElementById('perfFrameLimiter')
-      if (frameLimiterInput) {
-        frameLimiterInput.checked = gameState.frameLimiterEnabled !== false
-        frameLimiterInput.addEventListener('change', (event) => {
-          gameState.frameLimiterEnabled = event.target.checked
-        })
-      }
     }
   }
 
@@ -45,10 +34,6 @@ class PerformanceDialog {
     gameState.performanceVisible = !gameState.performanceVisible
     if (gameState.performanceVisible) {
       this.container.classList.add('visible')
-      const frameLimiterInput = document.getElementById('perfFrameLimiter')
-      if (frameLimiterInput) {
-        frameLimiterInput.checked = gameState.frameLimiterEnabled !== false
-      }
       this.start()
     } else {
       this.container.classList.remove('visible')
@@ -79,18 +64,12 @@ class PerformanceDialog {
     if (!this.contentEl) return
     const stats = window.performanceStatistics || {}
     const entries = Object.entries(stats)
-    const llmUsage = gameState.llmUsage || { totalTokens: 0, totalCostUsd: 0 }
     if (this.sortMode === 'duration') {
       entries.sort((a, b) => b[1].durationAvg - a[1].durationAvg)
     } else {
       entries.sort((a, b) => a[0].localeCompare(b[0]))
     }
     this.contentEl.innerHTML = `
-      <div class="perf-llm-summary">
-        <div class="perf-llm-summary__title">LLM Usage (Session)</div>
-        <div class="perf-llm-summary__row">Tokens: ${Math.round(llmUsage.totalTokens || 0)}</div>
-        <div class="perf-llm-summary__row">Spend: $${(llmUsage.totalCostUsd || 0).toFixed(4)}</div>
-      </div>
       <h3>avg (ms) / max (ms) / calls</h3>
     `
     entries.forEach(([name, data]) => {

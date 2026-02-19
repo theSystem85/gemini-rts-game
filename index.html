@@ -523,7 +523,7 @@
           <span class="button-icon">ℹ️</span>
         </button>
         <button id="performanceWidgetBtn" class="action-button icon-button" type="button"
-          title="Toggle performance widget" aria-label="Toggle performance widget">
+          title="Toggle FPS overlay" aria-label="Toggle FPS overlay">
           <span class="button-icon">📊</span>
         </button>
       </div>
@@ -698,6 +698,8 @@
     <div id="frameTimeValue">Frame: -- ms</div>
     <div id="frameTimeMin">Min: -- ms</div>
     <div id="frameTimeMax">Max: -- ms</div>
+    <div id="fpsLlmTokens">Tokens: 0</div>
+    <div id="fpsLlmSpend">Spend: $0.0000</div>
     <div id="networkStatsContainer" style="display: none;">
       <div style="border-top: 1px solid rgba(255,255,255,0.3); margin: 4px 0;"></div>
       <div id="networkSendRate">↑ 0 B/s</div>
@@ -742,6 +744,10 @@
               type="button">Open Runtime Config Dialog</button>
             <button id="runBenchmarkBtn" class="config-modal__button" type="button">Run Performance Benchmark</button>
           </div>
+          <label class="config-modal__checkbox-row" for="settingsFrameLimiterToggle">
+            <input id="settingsFrameLimiterToggle" type="checkbox" checked>
+            Frame limiter (cap render loop to display refresh rate)
+          </label>
           <div class="config-modal__section">
             <h3 class="config-modal__section-title">Tutorial</h3>
             <label class="config-modal__field config-modal__field--toggle">

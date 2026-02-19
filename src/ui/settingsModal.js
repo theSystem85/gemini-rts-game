@@ -4,6 +4,7 @@
 import { runtimeConfigDialog } from './runtimeConfigDialog.js'
 import { renderKeybindingsEditor } from './keybindingsEditor.js'
 import { initLlmSettingsPanel } from './llmSettingsPanel.js'
+import { gameState } from '../gameState.js'
 
 function setActiveTab(modal, tabId) {
   const tabs = modal.querySelectorAll('[data-config-tab]')
@@ -35,6 +36,10 @@ function openModal(modal, defaultTab = 'keybindings') {
   modal.setAttribute('aria-hidden', 'false')
   document.body.classList.add('config-modal-open')
   const keybindingsPanel = modal.querySelector('[data-config-tab-panel="keybindings"]')
+  const frameLimiterToggle = modal.querySelector('#settingsFrameLimiterToggle')
+  if (frameLimiterToggle) {
+    frameLimiterToggle.checked = gameState.frameLimiterEnabled !== false
+  }
   if (keybindingsPanel) {
     renderKeybindingsEditor(keybindingsPanel)
   }
@@ -62,6 +67,7 @@ export function initSettingsModal() {
   const modal = document.getElementById('configSettingsModal')
   const closeBtn = document.getElementById('configModalCloseBtn')
   const runtimeLaunchBtn = document.getElementById('openRuntimeConfigDialogBtn')
+  const frameLimiterToggle = document.getElementById('settingsFrameLimiterToggle')
 
   if (!modal) return
 
@@ -81,6 +87,13 @@ export function initSettingsModal() {
   if (runtimeLaunchBtn) {
     runtimeLaunchBtn.addEventListener('click', () => {
       runtimeConfigDialog.openDialog()
+    })
+  }
+
+  if (frameLimiterToggle) {
+    frameLimiterToggle.checked = gameState.frameLimiterEnabled !== false
+    frameLimiterToggle.addEventListener('change', (event) => {
+      gameState.frameLimiterEnabled = event.target.checked
     })
   }
 }
