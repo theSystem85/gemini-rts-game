@@ -100,15 +100,59 @@ function readAndStoreProviderInput(providerId) {
   const apiKeyInput = document.getElementById(`llmApiKey-${providerId}`)
   const baseUrlInput = document.getElementById(`llmBaseUrl-${providerId}`)
   const modelSelect = document.getElementById(`llmModel-${providerId}`)
+  const riskConfirmInput = document.getElementById(`llmApiKeyRiskConfirm-${providerId}`)
+  const providerPatch = {
+    apiKey: apiKeyInput?.value || '',
+    baseUrl: baseUrlInput?.value || '',
+    model: modelSelect?.value || ''
+  }
+  if (riskConfirmInput) {
+    providerPatch.riskAccepted = riskConfirmInput.checked
+  }
   updateLlmSettings({
     providers: {
-      [providerId]: {
-        apiKey: apiKeyInput?.value || '',
-        baseUrl: baseUrlInput?.value || '',
-        model: modelSelect?.value || ''
-      }
+      [providerId]: providerPatch
     }
   })
+}
+
+
+function bindApiKeySecurityDisclosure(providerId, settings) {
+  const securityWrap = document.getElementById(`llmApiKeySecurity-${providerId}`)
+  const securityNote = document.getElementById(`llmApiKeySecurityNote-${providerId}`)
+  const apiKeyInput = document.getElementById(`llmApiKey-${providerId}`)
+  const riskConfirmInput = document.getElementById(`llmApiKeyRiskConfirm-${providerId}`)
+
+  if (!securityWrap || !securityNote || !apiKeyInput) return
+
+  const setVisible = visible => {
+    securityNote.classList.toggle('is-visible', visible)
+  }
+
+  const applyRiskState = () => {
+    if (!riskConfirmInput) return
+    const riskAccepted = Boolean(riskConfirmInput.checked)
+    apiKeyInput.disabled = !riskAccepted
+    if (!riskAccepted) {
+      apiKeyInput.title = 'Confirm risk acknowledgment to enable API key entry.'
+    } else {
+      apiKeyInput.title = ''
+    }
+  }
+
+  securityWrap.addEventListener('mouseenter', () => setVisible(true))
+  securityWrap.addEventListener('mouseleave', () => setVisible(false))
+  apiKeyInput.addEventListener('focus', () => setVisible(true))
+  apiKeyInput.addEventListener('click', () => setVisible(true))
+
+  if (riskConfirmInput) {
+    riskConfirmInput.checked = Boolean(settings.providers?.[providerId]?.riskAccepted)
+    riskConfirmInput.addEventListener('change', () => {
+      applyRiskState()
+      readAndStoreProviderInput(providerId)
+    })
+    applyRiskState()
+  }
 }
 
 function bindProviderInputs(providerId, settings) {
@@ -118,6 +162,8 @@ function bindProviderInputs(providerId, settings) {
   const baseUrlInput = document.getElementById(`llmBaseUrl-${providerId}`)
   const modelSelect = document.getElementById(`llmModel-${providerId}`)
   const refreshBtn = document.getElementById(`llmRefresh-${providerId}`)
+
+  bindApiKeySecurityDisclosure(providerId, settings)
 
   if (apiKeyInput) {
     apiKeyInput.value = settings.providers?.[providerId]?.apiKey || ''

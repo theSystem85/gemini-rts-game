@@ -158,6 +158,9 @@ Introduce configurable LLM support for enemy strategic planning and optional ene
 - The tooltip does not dismiss on `mouseleave` from the canvas when an enemy building is selected, preventing accidental hiding when the pointer enters the tooltip overlay.
 
 ## API Key & Provider Management
+- OpenAI API key entry now includes a security-critical disclosure panel that appears on hover/focus and explains required API scopes (`GET /v1/models`, `POST /v1/responses`), quota limiting, optional usage, and localStorage/XSS exposure risks.
+- OpenAI key input is gated behind an explicit "enter at my own risk" acknowledgment checkbox persisted in settings (`providers.openai.riskAccepted`).
+- The disclosure links to official OpenAI API key safety guidance and recommends low-cost models (for example nano-class variants).
 - Providers that require an API key (OpenAI, Anthropic, xAI) will not attempt model fetches or LLM calls when no key is configured.
 - Ollama runs locally and does not require an API key; the API key input is not shown in the settings UI.
 - Model list refresh during settings panel initialization is silent (no error notifications); explicit refresh button clicks show error notifications normally.
