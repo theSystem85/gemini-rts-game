@@ -1,3 +1,4 @@
+- [x] Add a sidebar icon button (with tooltip) next to the keyboard-mappings info button to toggle the performance widget directly.
 - [x] Add a performance-widget frame limiter toggle (default ON) and support uncapped FPS measurement by decoupling scheduler from vsync for bare-performance profiling.
 - [ ] Add HUD mode 4 with quarter-donut corner bars and crew at top/right/bottom/left centers with 3px spacing from arc starts; refine HUD 3 corner-centering and HUD 2 outline/bar alignment.
 - [x] Rewrite README professionally with clear project purpose/origin (December 2024, fully vibe coded), local install/run instructions, user-doc references, architecture-doc references, and preserve the prior README as a legacy file.

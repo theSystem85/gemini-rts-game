@@ -407,6 +407,14 @@ export class KeyboardHandler {
         this.helpSystem.showControlsHelp()
       })
     }
+
+    // Bind performance widget toggle button
+    const performanceWidgetBtn = document.getElementById('performanceWidgetBtn')
+    if (performanceWidgetBtn) {
+      performanceWidgetBtn.addEventListener('click', () => {
+        this.handlePerformanceToggle()
+      })
+    }
   }
 
   setMouseHandler(mouseHandler) {
