@@ -9,7 +9,8 @@
 import {
   HELIPAD_FUEL_CAPACITY,
   HELIPAD_RELOAD_TIME,
-  HELIPAD_AMMO_RESERVE
+  HELIPAD_AMMO_RESERVE,
+  UNIT_AMMO_CAPACITY
 } from '../config.js'
 
 // Building dimensions and costs
@@ -143,7 +144,8 @@ export const buildingData = {
     damage: 10, // Reduced by 50% (was 20)
     armor: 1,
     projectileType: 'bullet',
-    projectileSpeed: 12 // 4x faster (was 3)
+    projectileSpeed: 12, // 4x faster (was 3)
+    maxAmmo: UNIT_AMMO_CAPACITY.tank_v1 * 4
   },
   turretGunV2: {
     width: 1,
@@ -163,7 +165,8 @@ export const buildingData = {
     projectileSpeed: 16, // 4x faster (was 4)
     burstFire: true,
     burstCount: 2,
-    burstDelay: 150 // ms between burst shots
+    burstDelay: 150, // ms between burst shots
+    maxAmmo: UNIT_AMMO_CAPACITY.tank_v1 * 4
   },
   turretGunV3: {
     width: 1,
@@ -183,7 +186,8 @@ export const buildingData = {
     projectileSpeed: 15,
     burstFire: true, // Special feature: fires 3 shots in quick succession
     burstCount: 3,
-    burstDelay: 150 // ms between burst shots
+    burstDelay: 150, // ms between burst shots
+    maxAmmo: UNIT_AMMO_CAPACITY.tank_v1 * 4
   },
   rocketTurret: {
     width: 2,
@@ -202,9 +206,10 @@ export const buildingData = {
     armor: 2, // 2x the armor of a tank
     projectileType: 'rocket',
     projectileSpeed: 5,
-    burstFire: true, // Special feature: fires 4 shots in quick succession
-    burstCount: 4,
-    burstDelay: 500 // ms between burst shots
+    burstFire: true, // Special feature: fires 6 shots in quick succession
+    burstCount: 6,
+    burstDelay: 500, // ms between burst shots
+    maxAmmo: UNIT_AMMO_CAPACITY.rocketTank * 4
   },
   teslaCoil: {
     width: 2,
@@ -239,7 +244,8 @@ export const buildingData = {
     damage: 100, // 500% of a tank's base damage
     armor: 2,
     projectileType: 'artillery',
-    projectileSpeed: 0.75
+    projectileSpeed: 0.75,
+    maxAmmo: UNIT_AMMO_CAPACITY.howitzer * 4
   },
   concreteWall: {
     width: 1,

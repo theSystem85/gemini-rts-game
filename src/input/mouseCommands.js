@@ -265,12 +265,30 @@ export function handleServiceProviderClick(handler, provider, selectedUnits, uni
     return false
   }
 
-  const requesters = selectedUnits.filter(unit =>
-    selectionManager.isHumanPlayerUnit(unit) && unit.id !== provider.id
-  )
+  const requesters = selectedUnits.filter(unit => {
+    const isFriendlyUnit = selectionManager.isHumanPlayerUnit(unit)
+    const isFriendlyBuilding = Boolean(unit?.isBuilding && selectionManager.isHumanPlayerBuilding(unit))
+    return (isFriendlyUnit || isFriendlyBuilding) && unit.id !== provider.id
+  })
 
   if (requesters.length === 0) {
     return false
+  }
+
+  if (provider.type === 'ammunitionTruck') {
+    let handled = false
+    requesters.forEach(requester => {
+      const needsAmmo = requester.isBuilding
+        ? (typeof requester.maxAmmo === 'number' && requester.ammo < requester.maxAmmo)
+        : (requester.type === 'apache'
+          ? (typeof requester.maxRocketAmmo === 'number' && requester.rocketAmmo < requester.maxRocketAmmo)
+          : (typeof requester.maxAmmunition === 'number' && requester.ammunition < requester.maxAmmunition))
+      if (needsAmmo) {
+        unitCommands.handleAmmunitionTruckResupplyCommand([provider], requester, mapGrid, { suppressNotifications: true })
+        handled = true
+      }
+    })
+    return handled
   }
 
   return unitCommands.handleServiceProviderRequest(provider, requesters, mapGrid)
