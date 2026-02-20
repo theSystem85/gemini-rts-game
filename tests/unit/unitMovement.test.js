@@ -144,7 +144,7 @@ describe('unitMovement.js', () => {
       expect(updateUnitPosition).toHaveBeenCalled()
     })
 
-    it('should handle dodge completion', () => {
+    it('should clear local avoidance state after dodge completion', () => {
       const unit = {
         health: 100,
         x: 32,
@@ -153,12 +153,12 @@ describe('unitMovement.js', () => {
         tileY: 1,
         isDodging: true,
         path: [],
-        originalPath: [{ x: 5, y: 5 }],
-        originalTarget: { x: 5, y: 5 }
+        localAvoidanceRemainingSteps: 0
       }
       updateUnitMovement([unit], mockMapGrid, mockOccupancyMap, mockGameState, performance.now())
       expect(unit.isDodging).toBe(false)
-      expect(unit.path).toEqual([{ x: 5, y: 5 }])
+      expect(unit.path).toEqual([])
+      expect(unit.localAvoidanceRemainingSteps).toBe(0)
     })
 
     it('should clamp tile indices to map bounds', () => {

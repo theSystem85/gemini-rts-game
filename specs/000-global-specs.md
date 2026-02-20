@@ -86,6 +86,8 @@ Ground and air movement logic is split across modular files to keep each under 1
 - Apache flight state: [src/game/movementApache.js](../src/game/movementApache.js)
 - Stuck recovery/dodge helpers: [src/game/movementStuck.js](../src/game/movementStuck.js)
 - Shared helpers/constants: [src/game/movementConstants.js](../src/game/movementConstants.js), [src/game/movementHelpers.js](../src/game/movementHelpers.js)
+- Player-issued ground move routes must not be discarded during local stuck recovery; recovery should splice a short local avoidance detour into the existing route and continue toward the same destination.
+- Local obstacle evasion must be visualized in movement path rendering: active evasion path fragments are drawn in blue while the remaining planned route stays orange.
 
 ## Audio Loading Policy
 

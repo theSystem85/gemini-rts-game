@@ -211,3 +211,5 @@
 - [x] Ensure the minimap "RADAR OFFLINE" background grain effect animates again instead of appearing static.
 - [x] Fix integration smoke test canvas mocking by patching `HTMLCanvasElement.prototype.getContext` so jsdom-created canvases in `index.html` no longer emit "Not implemented" startup errors.
 - [x] Add a Settings modal toggle to enable/disable radar-offline minimap grain animation, and make the white-snow grain visibly flicker/move like an old no-signal TV feed.
+- [x] Fix ground-unit pathfinding reroute thrash: preserve the planned route during stuck recovery, splice in local obstacle evasion instead of clearing full paths, and visualize active local-avoidance path segments in blue in waypoint rendering.
+

@@ -25,6 +25,31 @@ function ensureMovement(unit) {
   return unit.movement
 }
 
+function beginLocalAvoidance(unit, detourTiles) {
+  if (!unit || !Array.isArray(detourTiles) || detourTiles.length === 0) {
+    return false
+  }
+
+  const now = performance.now()
+  const remainingRoute = Array.isArray(unit.path) ? [...unit.path] : []
+  const lastDetourTile = detourTiles[detourTiles.length - 1]
+
+  const mergedRoute = [...detourTiles]
+  if (remainingRoute.length > 0) {
+    const firstMainRouteTile = remainingRoute[0]
+    const skipFirstMainTile = firstMainRouteTile && firstMainRouteTile.x === lastDetourTile.x && firstMainRouteTile.y === lastDetourTile.y
+    mergedRoute.push(...(skipFirstMainTile ? remainingRoute.slice(1) : remainingRoute))
+  }
+
+  unit.path = mergedRoute
+  unit.isDodging = true
+  unit.dodgeEndTime = now + 2500
+  unit.localAvoidanceRemainingSteps = detourTiles.length
+  unit.localAvoidanceTotalSteps = detourTiles.length
+
+  return true
+}
+
 export function rotateUnitInPlace(unit, targetDirection = null) {
   if (!unit) {
     return false
@@ -194,7 +219,9 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
                 rotateUnitInPlace(unit)
               }
             } else {
-              unit.path = []
+              if (!hasActivePlayerMove) {
+                unit.path = []
+              }
               stuck.stuckTime = 0
               stuck.rotationAttempts = 0
               stuck.dodgeAttempts = 0
@@ -260,7 +287,9 @@ export function handleStuckUnit(unit, mapGrid, occupancyMap, units, gameState = 
               rotateUnitInPlace(unit)
             }
           } else {
-            unit.path = []
+            if (!hasActivePlayerMove) {
+              unit.path = []
+            }
             stuck.stuckTime = 0
             stuck.rotationAttempts = 0
             stuck.dodgeAttempts = 0
@@ -315,17 +344,7 @@ function tryRandomStuckMovement(unit, mapGrid, occupancyMap, units) {
   const targetY = Math.round(currentTileY + Math.sin(newDirection) * forwardDistance)
 
   if (isValidDodgePosition(targetX, targetY, mapGrid, units)) {
-    if (!unit.originalPath && unit.path) {
-      unit.originalPath = [...unit.path]
-      unit.originalTarget = unit.target
-    }
-
-    unit.isDodging = true
-    unit.dodgeEndTime = performance.now() + 3000
-
-    unit.path = [{ x: targetX, y: targetY }]
-
-    return true
+    return beginLocalAvoidance(unit, [{ x: targetX, y: targetY }])
   }
 
   return false
@@ -353,26 +372,17 @@ async function tryDodgeMovement(unit, mapGrid, occupancyMap, units) {
   if (dodgePositions.length > 0) {
     const dodgePos = dodgePositions[Math.floor(gameRandom() * dodgePositions.length)]
 
-    if (!unit.originalPath && unit.path) {
-      unit.originalPath = [...unit.path]
-      unit.originalTarget = unit.target
-    }
-
-    unit.isDodging = true
-    unit.dodgeEndTime = performance.now() + 3000
-
     const dodgePath = findPath(
       { x: currentTileX, y: currentTileY, owner: unit.owner },
       dodgePos,
       mapGrid,
-      null,
+      occupancyMap,
       undefined,
       { unitOwner: unit.owner }
     )
 
     if (dodgePath.length > 1) {
-      unit.path = dodgePath.slice(1)
-      return true
+      return beginLocalAvoidance(unit, dodgePath.slice(1))
     }
   }
 
