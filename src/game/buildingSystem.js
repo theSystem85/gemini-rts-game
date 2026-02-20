@@ -12,6 +12,8 @@ import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turret
 import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
 import { recordDestroyed } from '../ai-api/transitionCollector.js'
+import { ROCKET_TURRET_IMAGE_COORDS_SIZE, ROCKET_TURRET_MUZZLE_OFFSETS } from './turretMuzzleConfig.js'
+
 
 const ROCKET_TURRET_IMAGE_COORDS_SIZE = 192
 const ROCKET_TURRET_MUZZLE_OFFSETS = [
@@ -401,6 +403,14 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           }
         }
 
+        // Defensive turrets with ammunition cannot fire when empty
+        if (!hasTurretAmmo(building)) {
+          if (building.currentBurst > 0) {
+            building.currentBurst = 0
+          }
+          return
+        }
+
         // Check burst fire status first
         if (building.burstFire && building.currentBurst > 0) {
           // Continue burst fire sequence
@@ -495,6 +505,21 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
  * @param {number} now - Current timestamp
  * @param {Array} bullets - Array to add the bullet to
  */
+function hasTurretAmmo(building) {
+  return typeof building.maxAmmo !== 'number' || (building.ammo ?? 0) > 0
+}
+
+function spendTurretAmmo(building, amount = 1) {
+  if (typeof building.maxAmmo !== 'number') {
+    return true
+  }
+  if ((building.ammo ?? 0) <= 0) {
+    return false
+  }
+  building.ammo = Math.max(0, (building.ammo ?? 0) - amount)
+  return true
+}
+
 function fireTurretProjectile(building, target, centerX, centerY, now, bullets, gameState) {
   // Bail early if target is missing and we need it
   if (!target && !building.currentTargetPosition) {
@@ -567,6 +592,10 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
     }
   } else if (building.type !== 'rocketTurret') {
     building.muzzleFlashIndex = 0
+  }
+
+  if (!spendTurretAmmo(building, 1)) {
+    return
   }
 
   // Create a bullet object with all required properties

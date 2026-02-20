@@ -59,29 +59,15 @@ export const updateUnitMovement = logPerformance(function updateUnitMovement(uni
     // Store previous position for collision detection
     const prevX = unit.x, prevY = unit.y
 
-    // Handle dodge completion
-    if (unit.isDodging && unit.path && unit.path.length === 0 && unit.originalPath) {
-      // Prune waypoints that are behind the unit's current position
-      // to prevent backtracking after a dodge manoeuvre
-      const restoredPath = unit.originalPath.filter(wp => {
-        const wpDist = Math.hypot(wp.x - unit.tileX, wp.y - unit.tileY)
-        // Keep waypoints that are ahead of or very close to the unit
-        if (unit.moveTarget) {
-          const wpToTarget = Math.hypot(wp.x - unit.moveTarget.x, wp.y - unit.moveTarget.y)
-          const unitToTarget = Math.hypot(unit.tileX - unit.moveTarget.x, unit.tileY - unit.moveTarget.y)
-          // Keep waypoints that are closer to the destination than the unit is
-          return wpToTarget <= unitToTarget + 2
-        }
-        return wpDist > 0
-      })
-      unit.path = restoredPath.length > 0 ? restoredPath : []
-      unit.target = unit.originalTarget
-      unit.originalPath = null
-      unit.originalTarget = null
-      unit.isDodging = false
-      unit.dodgeEndTime = null
-      // Mark path as needing occupancy-aware recalculation
-      unit.pathComputedWithOccupancy = false
+    // Handle local avoidance completion/timeout
+    if (unit.isDodging) {
+      const dodgeExpired = unit.dodgeEndTime && now > unit.dodgeEndTime
+      const dodgeFinished = !unit.path || unit.path.length === 0 || (unit.localAvoidanceRemainingSteps || 0) <= 0
+      if (dodgeExpired || dodgeFinished) {
+        unit.isDodging = false
+        unit.dodgeEndTime = null
+        unit.localAvoidanceRemainingSteps = 0
+      }
     }
 
     // Handle retreat behavior

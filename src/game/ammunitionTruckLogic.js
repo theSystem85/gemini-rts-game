@@ -31,6 +31,31 @@ function isUnitAdjacentToBuilding(unit, building, range = 1) {
   return false
 }
 
+
+function findNearestEmptyAmmoBuilding(ammoTruck, buildings) {
+  if (!Array.isArray(buildings) || buildings.length === 0) {
+    return null
+  }
+
+  let best = null
+  let bestDistance = Infinity
+  for (const building of buildings) {
+    if (!building || building.owner !== ammoTruck.owner || building.health <= 0) continue
+    if (typeof building.maxAmmo !== 'number' || building.maxAmmo <= 0) continue
+    if ((building.ammo ?? 0) > 0) continue
+
+    const centerX = building.x + (building.width || 1) / 2
+    const centerY = building.y + (building.height || 1) / 2
+    const distance = Math.hypot(centerX - ammoTruck.tileX, centerY - ammoTruck.tileY)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = building
+    }
+  }
+
+  return best
+}
+
 export const updateAmmunitionTruckLogic = logPerformance(function(units, gameState, delta) {
   const ammoTrucks = units.filter(u => u.type === 'ammunitionTruck' && u.health > 0)
   if (ammoTrucks.length === 0) return
@@ -138,6 +163,17 @@ export const updateAmmunitionTruckLogic = logPerformance(function(units, gameSta
                  ammoTruck.utilityQueue.currentTargetType !== (ammoTruck.ammoResupplyTarget.type ? 'unit' : 'building')) {
         ammoTruck.utilityQueue.currentTargetId = ammoTruck.ammoResupplyTarget.id
         ammoTruck.utilityQueue.currentTargetType = ammoTruck.ammoResupplyTarget.type ? 'unit' : 'building'
+      }
+      return
+    }
+
+    if (!ammoTruck.ammoResupplyTarget && ammoTruck.ammoCargo > 0 && unitCommands) {
+      const emptyBuilding = findNearestEmptyAmmoBuilding(ammoTruck, gameState.buildings)
+      if (emptyBuilding) {
+        unitCommands.assignAmmunitionTruckToTarget(ammoTruck, emptyBuilding, gameState.mapGrid, {
+          suppressNotifications: true,
+          mode: 'resupply'
+        })
       }
     }
   })

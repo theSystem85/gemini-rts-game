@@ -983,7 +983,7 @@ function handleUnitSelection(handler, worldX, worldY, e, units, factories, selec
     }
   }
 
-  const friendlySelected = selectedUnits.some(u => selectionManager.isHumanPlayerUnit(u))
+  const friendlySelected = selectedUnits.some(u => selectionManager.isHumanPlayerUnit(u) || selectionManager.isHumanPlayerBuilding(u))
   const clickedIsEnemy = clickedUnit && !selectionManager.isHumanPlayerUnit(clickedUnit)
 
   if (clickedUnit && !(friendlySelected && clickedIsEnemy)) {

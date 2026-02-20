@@ -123,6 +123,7 @@
 - [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
 - [x] ✅ Paused attack pathfinding while a tank is remote controlled and delayed auto-movement for 1s after remote control stops.
 ## Bugs
+- [x] Add ammo-based defensive turret logistics: align rocket turret muzzle flashes to 6 spawn points, add selected ammo/reload HUD bars for turretGun V1-V3/rocket/artillery turrets, enforce turret ammo consumption + reload via ammo trucks, and enable mutual ammo-truck↔turret move-into cursor/click interactions.
 - [x] Ensure rocket turret 6-rocket bursts cycle through six distinct muzzle coordinates `(60,40)`, `(60,73)`, `(60,107)`, `(130,40)`, `(130,73)`, `(130,107)` using each rocket sprite center as the spawn anchor.
 - [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
@@ -213,3 +214,5 @@
 - [x] Ensure the minimap "RADAR OFFLINE" background grain effect animates again instead of appearing static.
 - [x] Fix integration smoke test canvas mocking by patching `HTMLCanvasElement.prototype.getContext` so jsdom-created canvases in `index.html` no longer emit "Not implemented" startup errors.
 - [x] Add a Settings modal toggle to enable/disable radar-offline minimap grain animation, and make the white-snow grain visibly flicker/move like an old no-signal TV feed.
+- [x] Fix ground-unit pathfinding reroute thrash: preserve the planned route during stuck recovery, splice in local obstacle evasion instead of clearing full paths, and visualize active local-avoidance path segments in blue in waypoint rendering.
+
