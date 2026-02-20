@@ -54,7 +54,10 @@ body.is-touch {
   bottom: 0;
   width: var(--sidebar-width);
   height: auto;
-  background: #333;
+  background-color: #333;
+  background-image:
+    radial-gradient(10px 8px at calc(100% - 1px) 8px, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(90deg, #222 0%, #353535 97%, #444 100%);
   color: #fff;
   padding: 10px;
   padding-bottom: calc(10px + var(--safe-area-bottom));
