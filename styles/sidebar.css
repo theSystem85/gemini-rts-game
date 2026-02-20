@@ -675,6 +675,7 @@ body.is-touch .money-tooltip__meta {
   background-color: #333;
   border: none;
   color: #fff;
+  font-family: var(--game-font-family);
   cursor: pointer;
   position: relative;
   width: 100%;
@@ -838,6 +839,7 @@ body.is-touch .money-tooltip__meta {
 .production-button .building-name,
 .production-button .unit-name {
   position: absolute;
+  font-family: var(--game-font-family);
   bottom: 0;
   left: 0;
   width: 100%;

@@ -1,3 +1,4 @@
+- [x] Ensure all build/production button labels use the global futuristic font and automatically fall back to existing mobile short building labels when desktop text overflows.
 - [x] Apply a globally consistent open-source futuristic font (compact footprint) across CSS UI and canvas-rendered in-game text.
 - [x] Show FPS-overlay LLM token/cost rows only while LLM is enabled, and fix uncapped benchmark chart FPS sampling so final report points no longer collapse to 0 FPS when frame limiter is off.
 - [x] Rework dual FPS/performance widgets: position both below the notification bell without overlap, move frame-limiter control into Settings modal, remap sidebar button to FPS/canvas overlay toggle, and remove LLM cost block from HTML debug widget while keeping LLM stats in the main FPS overlay.
