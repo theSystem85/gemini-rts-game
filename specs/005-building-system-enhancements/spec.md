@@ -210,6 +210,9 @@ As a player, I want to set unique rally points for each factory independently, s
 **Loss Handling:**
 - **FR-046**: System MUST disable the Buildings production tab when the player has no active construction yards and automatically switch focus to the Units tab when a vehicle factory is available for continued production.
 
+**Rocket Turret Launch Geometry:**
+- **FR-047**: System MUST fire each 6-rocket rocket-turret burst from six distinct turret-image coordinates `(60,40)`, `(60,73)`, `(60,107)`, `(130,40)`, `(130,73)`, `(130,107)` mapped to the rendered building footprint, and treat each coordinate as the projectile-center spawn point.
+
 ### Key Entities
 
 - **Blueprint**: Visual representation of pending building placement (blue overlay with name text), does not block tiles
