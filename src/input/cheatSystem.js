@@ -147,7 +147,7 @@ export class CheatSystem {
             <li><code>status</code> - Show current cheat status</li>
             <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
             <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
-            <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
+            <li><code>ammo [value|percent%|+/-value|+/-percent%]</code> - Set or adjust ammo for selected units/buildings with ammo bars</li>
             <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
             <li><code>xp [amount]</code> / <code>xp +[amount]</code> / <code>xp -[amount]</code> - Set or adjust XP for selected combat units</li>
             <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
@@ -346,7 +346,7 @@ export class CheatSystem {
           if (parsed) {
             this.setAmmoTruckLoad(parsed)
           } else {
-            this.showError('Invalid amount. Use: ammo load [number] or ammo load [percent%]')
+            this.showError('Invalid amount. Use: ammo load [number], [percent%], +[number], -[number], +[percent%], or -[percent%]')
           }
         } else {
           // Handle "ammo [amount]" for selected units
@@ -354,7 +354,7 @@ export class CheatSystem {
           if (parsed) {
             this.setSelectedUnitsAmmo(parsed)
           } else {
-            this.showError('Invalid amount. Use: ammo [number] or ammo [percent%]')
+            this.showError('Invalid amount. Use: ammo [number], [percent%], +[number], -[number], +[percent%], or -[percent%]')
           }
         }
       } else if (normalizedCode.startsWith('xp ')) {
@@ -454,14 +454,27 @@ export class CheatSystem {
   parseAmmoValue(input) {
     if (!input) return null
     const trimmed = input.trim()
-    if (trimmed.endsWith('%')) {
-      const percent = parseFloat(trimmed.slice(0, -1))
+    if (!trimmed) return null
+
+    const prefix = trimmed[0]
+    const isRelative = prefix === '+' || prefix === '-'
+    const numericPart = isRelative ? trimmed.slice(1).trim() : trimmed
+    if (!numericPart) return null
+
+    const sign = prefix === '-' ? -1 : 1
+    if (numericPart.endsWith('%')) {
+      const percent = parseFloat(numericPart.slice(0, -1))
       if (isNaN(percent)) return null
-      return { value: percent / 100, isPercent: true, display: `${percent}%` }
+      const displayPrefix = isRelative ? prefix : ''
+      return { value: (percent / 100) * sign, isPercent: true, isRelative, display: `${displayPrefix}${percent}%` }
     }
-    const amount = this.parseAmount(trimmed)
-    if (amount === null) return null
-    return { value: amount, isPercent: false, display: `${amount}` }
+
+    const amount = parseInt(numericPart.replace(/[,$]/g, ''), 10)
+    if (isNaN(amount)) return null
+
+    const signedAmount = amount * sign
+    const displayPrefix = isRelative ? prefix : ''
+    return { value: signedAmount, isPercent: false, isRelative, display: `${displayPrefix}${amount}` }
   }
 
   parseExperienceValue(input) {
@@ -1031,7 +1044,7 @@ export class CheatSystem {
   }
 
   setSelectedUnitsAmmo(parsed) {
-    const { value, isPercent, display } = parsed
+    const { value, isPercent, isRelative = false, display } = parsed
 
     if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showError('No unit selected')
@@ -1041,7 +1054,9 @@ export class CheatSystem {
     let appliedCount = 0
     this.selectedUnits.forEach(unit => {
       if (unit.type === 'apache' && typeof unit.maxRocketAmmo === 'number') {
-        const target = isPercent ? unit.maxRocketAmmo * value : value
+        const currentAmmo = typeof unit.rocketAmmo === 'number' ? unit.rocketAmmo : unit.maxRocketAmmo
+        const deltaOrTarget = isPercent ? unit.maxRocketAmmo * value : value
+        const target = isRelative ? currentAmmo + deltaOrTarget : deltaOrTarget
         const clamped = Math.max(0, Math.min(target, unit.maxRocketAmmo))
         unit.rocketAmmo = clamped
         if (typeof unit.maxAmmunition === 'number') {
@@ -1054,24 +1069,34 @@ export class CheatSystem {
         }
         appliedCount++
       } else if (typeof unit.maxAmmunition === 'number') {
-        const target = isPercent ? unit.maxAmmunition * value : value
+        const currentAmmo = typeof unit.ammunition === 'number' ? unit.ammunition : unit.maxAmmunition
+        const deltaOrTarget = isPercent ? unit.maxAmmunition * value : value
+        const target = isRelative ? currentAmmo + deltaOrTarget : deltaOrTarget
         const clamped = Math.max(0, Math.min(target, unit.maxAmmunition))
         unit.ammunition = clamped
         if (clamped > 0) unit.noAmmoNotificationShown = false // Reset notification flag
+        appliedCount++
+      } else if (typeof unit.maxAmmo === 'number') {
+        const currentAmmo = typeof unit.ammo === 'number' ? unit.ammo : unit.maxAmmo
+        const deltaOrTarget = isPercent ? unit.maxAmmo * value : value
+        const target = isRelative ? currentAmmo + deltaOrTarget : deltaOrTarget
+        const clamped = Math.max(0, Math.min(target, unit.maxAmmo))
+        unit.ammo = clamped
         appliedCount++
       }
     })
 
     if (appliedCount > 0) {
-      showNotification(`🔫 Ammo set to ${display} for ${appliedCount} unit${appliedCount > 1 ? 's' : ''}`, 3000)
+      const verb = isRelative ? 'adjusted by' : 'set to'
+      showNotification(`🔫 Ammo ${verb} ${display} for ${appliedCount} item${appliedCount > 1 ? 's' : ''}`, 3000)
       playSound('confirmed', 0.5)
     } else {
-      this.showError('No units with ammunition selected')
+      this.showError('No selected units or buildings with ammunition found')
     }
   }
 
   setAmmoTruckLoad(parsed) {
-    const { value, isPercent, display } = parsed
+    const { value, isPercent, isRelative, display } = parsed
 
     if (!this.selectedUnits || this.selectedUnits.length === 0) {
       this.showError('No unit selected')
@@ -1086,7 +1111,9 @@ export class CheatSystem {
           unit.maxAmmoCargo = 500 // Default AMMO_TRUCK_CARGO value
         }
 
-        const target = isPercent ? unit.maxAmmoCargo * value : value
+        const currentLoad = typeof unit.ammoCargo === 'number' ? unit.ammoCargo : 0
+        const deltaOrTarget = isPercent ? unit.maxAmmoCargo * value : value
+        const target = isRelative ? currentLoad + deltaOrTarget : deltaOrTarget
         const clamped = Math.max(0, Math.min(target, unit.maxAmmoCargo))
         unit.ammoCargo = clamped
         appliedCount++
@@ -1096,7 +1123,9 @@ export class CheatSystem {
           unit.maxAmmo = HELIPAD_AMMO_RESERVE
         }
 
-        const target = isPercent ? unit.maxAmmo * value : value
+        const currentAmmo = typeof unit.ammo === 'number' ? unit.ammo : unit.maxAmmo
+        const deltaOrTarget = isPercent ? unit.maxAmmo * value : value
+        const target = isRelative ? currentAmmo + deltaOrTarget : deltaOrTarget
         const clamped = Math.max(0, Math.min(target, unit.maxAmmo))
         unit.ammo = clamped
         appliedCount++
@@ -1104,7 +1133,8 @@ export class CheatSystem {
     })
 
     if (appliedCount > 0) {
-      showNotification(`🚛 Ammo load set to ${display} for ${appliedCount} item${appliedCount > 1 ? 's' : ''}`, 3000)
+      const verb = isRelative ? 'adjusted by' : 'set to'
+      showNotification(`🚛 Ammo load ${verb} ${display} for ${appliedCount} item${appliedCount > 1 ? 's' : ''}`, 3000)
       playSound('confirmed', 0.5)
     } else {
       this.showError('No ammunition trucks or helipads selected')

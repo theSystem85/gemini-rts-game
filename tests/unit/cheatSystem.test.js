@@ -223,7 +223,11 @@ describe('CheatSystem', () => {
 
     expect(system.parseFuelValue('50%')).toEqual({ value: 0.5, isPercent: true, display: '50%' })
     expect(system.parseFuelValue('90')).toEqual({ value: 90, isPercent: false, display: '90' })
-    expect(system.parseAmmoValue('25%')).toEqual({ value: 0.25, isPercent: true, display: '25%' })
+    expect(system.parseAmmoValue('25%')).toEqual({ value: 0.25, isPercent: true, isRelative: false, display: '25%' })
+
+    expect(system.parseAmmoValue('40')).toEqual({ value: 40, isPercent: false, isRelative: false, display: '40' })
+    expect(system.parseAmmoValue('+10')).toEqual({ value: 10, isPercent: false, isRelative: true, display: '+10' })
+    expect(system.parseAmmoValue('-15%')).toEqual({ value: -0.15, isPercent: true, isRelative: true, display: '-15%' })
   })
 
   it('parses spawn commands with unit type, count, and party', () => {
@@ -539,29 +543,33 @@ describe('CheatSystem', () => {
     expect(showNotification).toHaveBeenCalledWith(expect.stringContaining('Medics set to 3'), 3000)
   })
 
-  it('sets ammo on weapons and apache rockets', () => {
+  it('sets ammo on units and ammo-bar buildings with absolute and relative values', () => {
     const system = new CheatSystem()
     const tank = { maxAmmunition: 10, ammunition: 0 }
     const apache = { type: 'apache', maxRocketAmmo: 8, rocketAmmo: 0 }
-    system.setSelectedUnitsRef([tank, apache])
+    const turret = { type: 'rocketTurret', maxAmmo: 20, ammo: 5 }
+    system.setSelectedUnitsRef([tank, apache, turret])
 
-    system.setSelectedUnitsAmmo({ value: 1, isPercent: false, display: '1' })
+    system.setSelectedUnitsAmmo({ value: 1, isPercent: false, isRelative: false, display: '1' })
+    system.setSelectedUnitsAmmo({ value: 0.25, isPercent: true, isRelative: true, display: '+25%' })
 
-    expect(tank.ammunition).toBe(1)
-    expect(apache.rocketAmmo).toBe(1)
+    expect(tank.ammunition).toBe(3.5)
+    expect(apache.rocketAmmo).toBe(3)
     expect(apache.canFire).toBe(true)
+    expect(turret.ammo).toBe(6)
   })
 
-  it('sets ammo truck cargo and helipad reserves', () => {
+  it('sets ammo truck cargo and helipad reserves with absolute and relative values', () => {
     const system = new CheatSystem()
     const truck = { type: 'ammunitionTruck', maxAmmoCargo: 200, ammoCargo: 0 }
     const helipad = { type: 'helipad', maxAmmo: 300, ammo: 0 }
     system.setSelectedUnitsRef([truck, helipad])
 
-    system.setAmmoTruckLoad({ value: 0.5, isPercent: true, display: '50%' })
+    system.setAmmoTruckLoad({ value: 0.5, isPercent: true, isRelative: false, display: '50%' })
+    system.setAmmoTruckLoad({ value: -25, isPercent: false, isRelative: true, display: '-25' })
 
-    expect(truck.ammoCargo).toBe(100)
-    expect(helipad.ammo).toBe(150)
+    expect(truck.ammoCargo).toBe(75)
+    expect(helipad.ammo).toBe(125)
   })
 
   it('sets selected unit health by percent and updates speed', () => {
