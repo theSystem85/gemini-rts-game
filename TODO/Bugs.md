@@ -210,3 +210,4 @@
 - [x] Ensure in mobile portrait that long-press production tooltips do not open when the user is dragging a build button (drag-to-build gesture).
 - [x] Ensure the minimap "RADAR OFFLINE" background grain effect animates again instead of appearing static.
 - [x] Fix integration smoke test canvas mocking by patching `HTMLCanvasElement.prototype.getContext` so jsdom-created canvases in `index.html` no longer emit "Not implemented" startup errors.
+- [x] Add a Settings modal toggle to enable/disable radar-offline minimap grain animation, and make the white-snow grain visibly flicker/move like an old no-signal TV feed.

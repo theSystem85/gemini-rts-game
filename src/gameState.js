@@ -157,6 +157,9 @@ export const gameState = {
 
   // Performance measurement frame limiter toggle (default ON = refresh-rate capped)
   frameLimiterEnabled: true,
+  // Animate minimap radar-offline grain/snow effect
+  radarOfflineAnimationEnabled: true,
+
 
   // LLM usage tracking (per session)
   llmUsage: {

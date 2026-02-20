@@ -2,6 +2,7 @@
 import { TILE_SIZE, TILE_COLORS, PARTY_COLORS } from '../config.js'
 import { videoOverlay } from '../ui/videoOverlay.js'
 import { gameRandom } from '../utils/gameRandom.js'
+import { gameState } from '../gameState.js'
 import {
   getPlayableViewportHeight,
   getPlayableViewportWidth
@@ -19,9 +20,14 @@ export class MinimapRenderer {
     this.cachedMapHeight = 0
     this.cacheDirty = true
 
-    // Cache for the "radar offline" noise base layer; animated via scrolling overlays
+    // Cache for the "radar offline" base layer (background + label).
     this.radarOfflineCanvas = document.createElement('canvas')
     this.radarOfflineCtx = this.radarOfflineCanvas.getContext('2d')
+
+    // Cache for radar-offline grain texture (white snow) reused by animation passes.
+    this.radarOfflineGrainCanvas = document.createElement('canvas')
+    this.radarOfflineGrainCtx = this.radarOfflineGrainCanvas.getContext('2d')
+
     this.cachedOfflineWidth = 0
     this.cachedOfflineHeight = 0
     this.radarOfflineAnimationStart = performance.now()
@@ -375,62 +381,74 @@ export class MinimapRenderer {
     if (this.cachedOfflineWidth !== minimapWidth || this.cachedOfflineHeight !== minimapHeight) {
       this.cachedOfflineWidth = minimapWidth
       this.cachedOfflineHeight = minimapHeight
+
       this.radarOfflineCanvas.width = minimapWidth
       this.radarOfflineCanvas.height = minimapHeight
+      this.radarOfflineGrainCanvas.width = minimapWidth
+      this.radarOfflineGrainCanvas.height = minimapHeight
 
-      const ctx = this.radarOfflineCtx
-      ctx.fillStyle = '#333'
-      ctx.fillRect(0, 0, minimapWidth, minimapHeight)
+      const baseCtx = this.radarOfflineCtx
+      baseCtx.fillStyle = '#222'
+      baseCtx.fillRect(0, 0, minimapWidth, minimapHeight)
+      baseCtx.fillStyle = '#d22'
+      baseCtx.font = '24px "Rajdhani", "Arial Narrow", sans-serif'
+      baseCtx.textAlign = 'center'
+      baseCtx.textBaseline = 'middle'
+      baseCtx.fillText('RADAR OFFLINE', minimapWidth / 2, minimapHeight / 2)
 
-      ctx.fillStyle = '#f00'
-      ctx.font = '20px "Rajdhani", "Arial Narrow", sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('RADAR OFFLINE', minimapWidth / 2, minimapHeight / 2)
-
-      for (let i = 0; i < 300; i++) {
+      const grainCtx = this.radarOfflineGrainCtx
+      grainCtx.clearRect(0, 0, minimapWidth, minimapHeight)
+      for (let i = 0; i < 420; i++) {
         const x = gameRandom() * minimapWidth
         const y = gameRandom() * minimapHeight
-        const size = gameRandom() * 3 + 1
-        const opacity = gameRandom() * 0.3
-        ctx.fillStyle = `rgba(255,255,255,${opacity})`
-        ctx.fillRect(x, y, size, size)
+        const size = gameRandom() * 2 + 0.6
+        const opacity = gameRandom() * 0.45
+        grainCtx.fillStyle = `rgba(255,255,255,${opacity})`
+        grainCtx.fillRect(x, y, size, size)
       }
 
       this.radarOfflineAnimationStart = performance.now()
     }
 
     minimapCtx.drawImage(this.radarOfflineCanvas, 0, 0)
+    minimapCtx.drawImage(this.radarOfflineGrainCanvas, 0, 0)
 
-    const now = performance.now()
-    const elapsedSeconds = (now - this.radarOfflineAnimationStart) / 1000
+    if (gameState?.radarOfflineAnimationEnabled === false) {
+      return
+    }
 
-    // Animated CRT grain pass: scroll the cached noise texture at different rates
-    const grainShiftX = (elapsedSeconds * 33) % minimapWidth
-    const grainShiftY = (elapsedSeconds * 19) % minimapHeight
+    const elapsedSeconds = (performance.now() - this.radarOfflineAnimationStart) / 1000
+
+    // Old-TV style moving/flickering snow by scrolling/re-wrapping cached grain texture.
+    const grainShiftX = (elapsedSeconds * 27) % minimapWidth
+    const grainShiftY = (elapsedSeconds * 43) % minimapHeight
     minimapCtx.save()
-    minimapCtx.globalAlpha = 0.18
+    minimapCtx.globalAlpha = 0.28
     minimapCtx.globalCompositeOperation = 'screen'
-    minimapCtx.drawImage(this.radarOfflineCanvas, -grainShiftX, -grainShiftY)
-    minimapCtx.drawImage(this.radarOfflineCanvas, minimapWidth - grainShiftX, -grainShiftY)
-    minimapCtx.drawImage(this.radarOfflineCanvas, -grainShiftX, minimapHeight - grainShiftY)
+    minimapCtx.drawImage(this.radarOfflineGrainCanvas, -grainShiftX, -grainShiftY)
+    minimapCtx.drawImage(this.radarOfflineGrainCanvas, minimapWidth - grainShiftX, -grainShiftY)
+    minimapCtx.drawImage(this.radarOfflineGrainCanvas, -grainShiftX, minimapHeight - grainShiftY)
     minimapCtx.drawImage(
-      this.radarOfflineCanvas,
+      this.radarOfflineGrainCanvas,
       minimapWidth - grainShiftX,
       minimapHeight - grainShiftY
     )
+
+    // Add a small random speckle burst each frame so snow visibly flickers.
+    for (let i = 0; i < 70; i++) {
+      const x = gameRandom() * minimapWidth
+      const y = gameRandom() * minimapHeight
+      const size = gameRandom() * 1.8 + 0.4
+      const opacity = gameRandom() * 0.5 + 0.1
+      minimapCtx.fillStyle = `rgba(255,255,255,${opacity})`
+      minimapCtx.fillRect(x, y, size, size)
+    }
     minimapCtx.restore()
 
-    // Light scanline sweep to reinforce "offline monitor" animation feedback.
-    const sweepY = (elapsedSeconds * 52) % minimapHeight
-    minimapCtx.save()
-    const sweepGradient = minimapCtx.createLinearGradient(0, sweepY - 10, 0, sweepY + 10)
-    sweepGradient.addColorStop(0, 'rgba(255,255,255,0)')
-    sweepGradient.addColorStop(0.5, 'rgba(255,255,255,0.1)')
-    sweepGradient.addColorStop(1, 'rgba(255,255,255,0)')
-    minimapCtx.fillStyle = sweepGradient
-    minimapCtx.fillRect(0, sweepY - 10, minimapWidth, 20)
-    minimapCtx.restore()
+    // Subtle horizontal jitter line to mimic weak analog signal sync drift.
+    const jitterY = (elapsedSeconds * 58) % minimapHeight
+    minimapCtx.fillStyle = 'rgba(255,255,255,0.09)'
+    minimapCtx.fillRect(0, jitterY, minimapWidth, 1)
   }
 
   installTileWatchers(mapGrid) {
