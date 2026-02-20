@@ -29,12 +29,18 @@ function updateMobileLandscapeBuildingLabels(controller) {
       nameElement.dataset.defaultName = nameElement.textContent.trim()
     }
 
+    const shortLabel = mobileLandscapeBuildingLabelMap[buildingType]
+
     if (isMobileLandscape) {
-      nameElement.textContent = mobileLandscapeBuildingLabelMap[buildingType] || nameElement.dataset.defaultName
+      nameElement.textContent = shortLabel || nameElement.dataset.defaultName
       return
     }
 
     nameElement.textContent = nameElement.dataset.defaultName
+
+    if (shortLabel && nameElement.scrollWidth > nameElement.clientWidth) {
+      nameElement.textContent = shortLabel
+    }
   })
 }
 
@@ -43,9 +49,12 @@ function attachMobileLandscapeLabelSync(controller) {
     return
   }
 
-  document.addEventListener('mobile-landscape-layout-changed', () => {
+  const syncLabels = () => {
     updateMobileLandscapeBuildingLabels(controller)
-  })
+  }
+
+  document.addEventListener('mobile-landscape-layout-changed', syncLabels)
+  window.addEventListener('resize', syncLabels)
 
   controller.mobileLandscapeLabelSyncAttached = true
 }

@@ -248,7 +248,7 @@ export class BuildingRenderer {
 
     // Draw building type identifier as text
     ctx.fillStyle = '#fff'
-    ctx.font = '10px Arial'
+    ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(building.type, screenX + width / 2, screenY + height / 2)
   }
@@ -862,7 +862,7 @@ export class BuildingRenderer {
     // Show what's being built (text above the progress bar)
     if (building.owner !== gameState.humanPlayer) { // Only show for enemy factories
       ctx.fillStyle = '#FFF'
-      ctx.font = '10px Arial'
+      ctx.font = '10px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.strokeStyle = '#000'
       ctx.lineWidth = 2
@@ -985,7 +985,7 @@ export class BuildingRenderer {
         const budgetText = `$${Math.round(factory.budget)}`
         ctx.save()
         ctx.fillStyle = '#FFF'
-        ctx.font = '12px Arial'
+        ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
         ctx.textAlign = 'center'
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 2
@@ -1009,7 +1009,7 @@ export class BuildingRenderer {
       const powerText = `Power: ${gameState.enemyPowerSupply}`
       ctx.save()
       ctx.fillStyle = '#FFF'
-      ctx.font = '12px Arial'
+      ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
       ctx.textAlign = 'center'
       ctx.strokeStyle = '#000'
       ctx.lineWidth = 2
@@ -1051,7 +1051,7 @@ export class BuildingRenderer {
     }
 
     ctx.save()
-    ctx.font = 'bold 11px Arial'
+    ctx.font = 'bold 11px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 2

@@ -27,6 +27,10 @@
   <meta name="msapplication-TileColor" content="#2c3e50">
   <meta name="msapplication-config" content="/browserconfig.xml">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="preload" href="/cursors/default.svg" as="image" type="image/svg+xml">
   <link rel="stylesheet" href="./styles/base.css">
   <link rel="stylesheet" href="./styles/sidebar.css">
@@ -535,7 +539,7 @@
           <label class="multiplayer-join-label">Join via invite link:</label>
           <div class="multiplayer-join-input-row">
             <input type="text" id="inviteLinkInput" class="sidebar-input multiplayer-join-input"
-              placeholder="Paste invite link here" autocomplete="off">
+              placeholder="Paste invite link" autocomplete="off">
             <button type="button" id="joinInviteLinkBtn"
               class="multiplayer-invite-button multiplayer-join-btn">Join</button>
             <button type="button" id="scanQrBtn" class="multiplayer-invite-button multiplayer-scan-btn"

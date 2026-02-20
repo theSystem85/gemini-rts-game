@@ -14,7 +14,7 @@ export class DangerZoneRenderer {
     ctx.save()
     ctx.strokeStyle = 'rgba(255,0,0,0.5)'
     ctx.lineWidth = 1
-    ctx.font = '8px Arial'
+    ctx.font = '8px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.fillStyle = '#fff'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'bottom'
@@ -46,7 +46,7 @@ export class DangerZoneRenderer {
     ctx.strokeStyle = PARTY_COLORS[playerId] || '#fff'
     ctx.strokeRect(ctx.canvas.width - 110, 10, 100, 18)
     ctx.fillStyle = '#fff'
-    ctx.font = '12px Arial'
+    ctx.font = '12px "Rajdhani", "Arial Narrow", sans-serif'
     ctx.textAlign = 'center'
     const names = { player1: 'Green', player2: 'Red', player3: 'Blue', player4: 'Yellow' }
     const label = names[playerId] ? `Player ${names[playerId]}` : playerId

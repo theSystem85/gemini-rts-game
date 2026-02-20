@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Code for Battle — User Documentation</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+
     :root {
       --bg: #060c1a;
       --panel: #101a33;
@@ -22,10 +24,17 @@
     * { box-sizing: border-box; margin: 0; }
     html { scroll-behavior: smooth; }
     body {
-      font-family: Inter, 'Segoe UI', system-ui, Arial, sans-serif;
+      font-family: 'Rajdhani', 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif;
       color: var(--text);
       background: var(--bg);
       line-height: 1.6;
+    }
+    body * {
+      font-family: 'Rajdhani', 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif;
+    }
+    p, li, a, td, th, span, label, input, button, textarea, select, kbd,
+    .pill, .card p, .badge, .tech-node, .num, .zone-diagram {
+      font-size: max(14px, 1em);
     }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 64px; }
 
@@ -141,7 +150,7 @@
       border-radius: 6px;
       vertical-align: middle;
     }
-    .num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'SF Mono', 'Cascadia Code', monospace; font-size: 12px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
     .dim { color: rgba(159, 180, 217, 0.55); }
     .highlight { color: var(--accent); font-weight: 600; }
     .positive { color: var(--green); }

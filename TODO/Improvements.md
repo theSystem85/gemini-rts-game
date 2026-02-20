@@ -1,3 +1,6 @@
+- [x] Ensure all build/production button labels use the global futuristic font and automatically fall back to existing mobile short building labels when desktop text overflows.
+- [x] Apply Rajdhani to sidebar build tabs (desktop/mobile), map settings/edit/shuffle buttons, invite/join controls, save/invite placeholders, all sidebar input fields, and user docs with a 14px minimum.
+- [x] Apply a globally consistent open-source futuristic font (compact footprint) across CSS UI and canvas-rendered in-game text.
 - [x] Increase sidebar gradient visibility with a left-to-right professional blend and add a tiny 5-10px rounded highlight/drop near the top-right edge for subtle depth.
 - [x] Improve sidebar rendering with a subtle professional gradient treatment so the panel feels less flat while preserving readability.
 - [x] Show FPS-overlay LLM token/cost rows only while LLM is enabled, and fix uncapped benchmark chart FPS sampling so final report points no longer collapse to 0 FPS when frame limiter is off.

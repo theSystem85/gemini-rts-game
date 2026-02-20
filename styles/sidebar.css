@@ -577,6 +577,8 @@ body.is-touch .money-tooltip__meta {
   color: #eee;
   border: none;
   cursor: pointer;
+  font-family: var(--game-font-family);
+  font-size: 14px;
   font-weight: bold;
   transition: all 0.2s ease;
   -webkit-user-select: none;
@@ -675,6 +677,7 @@ body.is-touch .money-tooltip__meta {
   background-color: #333;
   border: none;
   color: #fff;
+  font-family: var(--game-font-family);
   cursor: pointer;
   position: relative;
   width: 100%;
@@ -838,6 +841,7 @@ body.is-touch .money-tooltip__meta {
 .production-button .building-name,
 .production-button .unit-name {
   position: absolute;
+  font-family: var(--game-font-family);
   bottom: 0;
   left: 0;
   width: 100%;
@@ -913,6 +917,8 @@ body.is-touch .money-tooltip__meta {
   color: #ccc;
   border: none;
   cursor: pointer;
+  font-family: var(--game-font-family);
+  font-size: 14px;
   font-weight: bold;
   transition: background-color 0.2s, color 0.2s;
   border-bottom: 2px solid transparent;

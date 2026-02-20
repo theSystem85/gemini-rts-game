@@ -9,13 +9,14 @@ html, body {
   cursor: var(--game-default-cursor);
   touch-action: manipulation;
   -ms-touch-action: manipulation;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--game-font-family);
 }
 
 :root {
   --sidebar-width: 250px;
   --mobile-action-size: 48px;
   --game-default-cursor: url('/cursors/default.svg') 6 4, auto;
+  --game-font-family: 'Rajdhani', 'Arial Narrow', 'Segoe UI', Tahoma, sans-serif;
 }
 
 body {
@@ -62,7 +63,7 @@ body.is-touch {
   padding-bottom: calc(10px + var(--safe-area-bottom));
   box-sizing: border-box;
   overflow: hidden;
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   display: flex;
   flex-direction: column;
   scrollbar-width: none; /* Hide scrollbar for Firefox */
@@ -245,6 +246,12 @@ body.is-touch {
 
 .multiplayer-join-status.success {
   color: #6efc4b;
+}
+
+#saveLabelInput::placeholder,
+#inviteLinkInput::placeholder {
+  font-family: var(--game-font-family);
+  font-size: 14px;
 }
 
 /* QR Code Modal styles */
@@ -542,6 +549,15 @@ body.is-touch {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
+  font-family: var(--game-font-family);
+  font-size: 14px;
+}
+
+#sidebar select,
+#sidebar input::placeholder,
+#sidebar textarea::placeholder {
+  font-family: var(--game-font-family);
+  font-size: 14px;
 }
 
 .sidebar-input {
@@ -1109,7 +1125,7 @@ body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resourc
 }
 
 body.mobile-landscape #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0;
@@ -1748,7 +1764,7 @@ body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileBuildMenuContainer 
 }
 
 body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileBuildMenuContainer #mobileStatusBar .mobile-resource-value {
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -1793,7 +1809,7 @@ body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileEnergyValue {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -1810,7 +1826,7 @@ body.mobile-portrait.sidebar-condensed.pwa-standalone #mobileMoneyValue {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -1905,7 +1921,7 @@ body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileBuildMenuCont
   top: 50%;
   left: 50%;
   z-index: 2;
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -1961,7 +1977,7 @@ body.mobile-portrait.sidebar-condensed:not(.pwa-standalone) #mobileEnergyValue {
   top: 50%;
   left: 50%;
   z-index: 2;
-  font-family: sans-serif;
+  font-family: var(--game-font-family);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -2016,11 +2032,24 @@ body.mobile-portrait.sidebar-condensed #mobileCategoryToggle {
   text-orientation: mixed;
   letter-spacing: 0;
   transform: none;
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+}
+
+#productionTabs .tab-button,
+#mobileBuildMenuContainer #productionTabs .tab-button,
+#mobileCategoryToggle,
+#mapSettingsBtn,
+#mapSettingsToggle,
+#mapEditModeBtn,
+#shuffleMapBtn,
+.multiplayer-invite-button,
+#joinInviteLinkBtn {
+  font-family: var(--game-font-family);
+  font-size: 14px;
 }
 
 body.mobile-portrait.sidebar-condensed #mobileCategoryToggle:hover {
