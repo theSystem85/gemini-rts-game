@@ -6,6 +6,7 @@ import { selectedUnits } from '../inputHandler.js'
 import { renderTurretWithImages, turretImagesAvailable } from './turretImageRenderer.js'
 import { getServiceRadiusPixels, isServiceBuilding } from '../utils/serviceRadius.js'
 import { recordBuildingCompleted } from '../ai-api/transitionCollector.js'
+import { ROCKET_TURRET_IMAGE_COORDS_SIZE, ROCKET_TURRET_MUZZLE_OFFSETS } from '../game/turretMuzzleConfig.js'
 
 export class BuildingRenderer {
   constructor() {
@@ -159,6 +160,7 @@ export class BuildingRenderer {
     this.renderHealthBar(ctx, building, screenX, screenY, width)
     this.renderHelipadFuel(ctx, building, screenX, screenY, width, height)
     this.renderHelipadAmmo(ctx, building, screenX, screenY, width, height)
+    this.renderTurretAmmo(ctx, building, screenX, screenY, width, height)
     this.renderAttackTargetIndicator(ctx, building, screenX, screenY, width, height)
     this.renderFactoryProductionProgress(ctx, building, screenX, screenY, width, height)
     this.renderWorkshopRestoration(ctx, building, screenX, screenY, width, height)
@@ -408,17 +410,19 @@ export class BuildingRenderer {
       } else if (building.type === 'rocketTurret') {
         const now = performance.now()
 
-        // Render muzzle flash for rocket turret (appears at center of building)
         if (building.muzzleFlashStartTime && now - building.muzzleFlashStartTime <= MUZZLE_FLASH_DURATION) {
           const flashProgress = (now - building.muzzleFlashStartTime) / MUZZLE_FLASH_DURATION
           const flashAlpha = 1 - flashProgress
-          const flashSize = MUZZLE_FLASH_SIZE * 1.5 * (1 - flashProgress * 0.5) // Larger flash for rockets
+          const flashSize = MUZZLE_FLASH_SIZE * 1.5 * (1 - flashProgress * 0.5)
+          const muzzleIndex = building.muzzleFlashIndex || 0
+          const muzzleOffset = ROCKET_TURRET_MUZZLE_OFFSETS[muzzleIndex % ROCKET_TURRET_MUZZLE_OFFSETS.length]
+          const flashX = screenX + (muzzleOffset.x / ROCKET_TURRET_IMAGE_COORDS_SIZE) * width
+          const flashY = screenY + (muzzleOffset.y / ROCKET_TURRET_IMAGE_COORDS_SIZE) * height
 
           ctx.save()
           ctx.globalAlpha = flashAlpha
 
-          // Create radial gradient for rocket muzzle flash
-          const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, flashSize)
+          const gradient = ctx.createRadialGradient(flashX, flashY, 0, flashX, flashY, flashSize)
           gradient.addColorStop(0, '#FFF')
           gradient.addColorStop(0.2, '#FF0')
           gradient.addColorStop(0.5, '#FF4500')
@@ -426,11 +430,10 @@ export class BuildingRenderer {
 
           ctx.fillStyle = gradient
           ctx.beginPath()
-          ctx.arc(centerX, centerY, flashSize, 0, Math.PI * 2)
+          ctx.arc(flashX, flashY, flashSize, 0, Math.PI * 2)
           ctx.fill()
           ctx.restore()
         }
-
       }
 
       // Draw range indicator if selected (for non-tesla coil and non-artillery buildings)
@@ -587,6 +590,51 @@ export class BuildingRenderer {
     const fillHeight = barHeight * ratio
     ctx.fillStyle = '#FFA500' // Orange color for ammunition
     ctx.fillRect(barX, barY + barHeight - fillHeight, barWidth, fillHeight)
+
+    ctx.strokeStyle = '#000'
+    ctx.strokeRect(barX, barY, barWidth, barHeight)
+  }
+
+
+  renderTurretAmmo(ctx, building, screenX, screenY, width, height) {
+    const ammoTurretTypes = new Set(['turretGunV1', 'turretGunV2', 'turretGunV3', 'rocketTurret', 'artilleryTurret'])
+    if (!ammoTurretTypes.has(building.type)) {
+      return
+    }
+
+    if (!building.selected || typeof building.maxAmmo !== 'number' || building.maxAmmo <= 0) {
+      return
+    }
+
+    const margin = 4
+    const barWidth = 5
+    const barHeight = Math.max(0, height - margin * 2)
+    if (barHeight <= 0) {
+      return
+    }
+
+    const ratio = Math.max(0, Math.min(1, (building.ammo ?? 0) / building.maxAmmo))
+    const barX = screenX + margin / 2
+    const barY = screenY + margin
+
+    ctx.fillStyle = '#333'
+    ctx.fillRect(barX, barY, barWidth, barHeight)
+
+    const fillHeight = barHeight * ratio
+    ctx.fillStyle = '#FFA500'
+    ctx.fillRect(barX, barY + barHeight - fillHeight, barWidth, fillHeight)
+
+    const cooldown = Math.max(1, building.fireCooldown || 1)
+    const now = performance.now()
+    const elapsed = building.lastShotTime ? now - building.lastShotTime : cooldown
+    const reloadRatio = building.currentBurst > 0 ? 0 : Math.max(0, Math.min(1, elapsed / cooldown))
+    const reloadLineY = barY + barHeight - (barHeight * reloadRatio)
+    ctx.strokeStyle = '#FF0000'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(barX, reloadLineY)
+    ctx.lineTo(barX + barWidth, reloadLineY)
+    ctx.stroke()
 
     ctx.strokeStyle = '#000'
     ctx.strokeRect(barX, barY, barWidth, barHeight)

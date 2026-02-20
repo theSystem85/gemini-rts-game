@@ -574,6 +574,9 @@ export class CursorManager {
         )
         const needsAmmo = selectedUnits.some(unit => {
           if (unit.owner !== gameState.humanPlayer) return false
+          if (unit.isBuilding) {
+            return typeof unit.maxAmmo === 'number' && unit.ammo < unit.maxAmmo
+          }
           if (unit.type === 'apache') {
             return typeof unit.maxRocketAmmo === 'number' && unit.rocketAmmo < unit.maxRocketAmmo
           }

@@ -12,6 +12,8 @@ import { getTurretImageConfig, turretImagesAvailable } from '../rendering/turret
 import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
 import { recordDestroyed } from '../ai-api/transitionCollector.js'
+import { ROCKET_TURRET_IMAGE_COORDS_SIZE, ROCKET_TURRET_MUZZLE_OFFSETS } from './turretMuzzleConfig.js'
+
 
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
@@ -391,6 +393,14 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
           }
         }
 
+        // Defensive turrets with ammunition cannot fire when empty
+        if (!hasTurretAmmo(building)) {
+          if (building.currentBurst > 0) {
+            building.currentBurst = 0
+          }
+          return
+        }
+
         // Check burst fire status first
         if (building.burstFire && building.currentBurst > 0) {
           // Continue burst fire sequence
@@ -485,6 +495,21 @@ const updateDefensiveBuildings = logPerformance(function updateDefensiveBuilding
  * @param {number} now - Current timestamp
  * @param {Array} bullets - Array to add the bullet to
  */
+function hasTurretAmmo(building) {
+  return typeof building.maxAmmo !== 'number' || (building.ammo ?? 0) > 0
+}
+
+function spendTurretAmmo(building, amount = 1) {
+  if (typeof building.maxAmmo !== 'number') {
+    return true
+  }
+  if ((building.ammo ?? 0) <= 0) {
+    return false
+  }
+  building.ammo = Math.max(0, (building.ammo ?? 0) - amount)
+  return true
+}
+
 function fireTurretProjectile(building, target, centerX, centerY, now, bullets, gameState) {
   // Bail early if target is missing and we need it
   if (!target && !building.currentTargetPosition) {
@@ -516,6 +541,24 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
   let spawnX = centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75)
   let spawnY = centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75)
 
+  // Rocket turret launch points are defined in image-space coordinates and
+  // mapped to the 2x2-tile rendered building footprint.
+  if (building.type === 'rocketTurret') {
+    const idx = building.nextSpawnIndex || 0
+    const pt = ROCKET_TURRET_MUZZLE_OFFSETS[idx % ROCKET_TURRET_MUZZLE_OFFSETS.length]
+    const buildingWidth = building.width * TILE_SIZE
+    const buildingHeight = building.height * TILE_SIZE
+    const buildingScreenX = building.x * TILE_SIZE
+    const buildingScreenY = building.y * TILE_SIZE
+    const scaleX = buildingWidth / ROCKET_TURRET_IMAGE_COORDS_SIZE
+    const scaleY = buildingHeight / ROCKET_TURRET_IMAGE_COORDS_SIZE
+
+    // Spawn position represents the rocket sprite center.
+    spawnX = buildingScreenX + pt.x * scaleX
+    spawnY = buildingScreenY + pt.y * scaleY
+    building.muzzleFlashIndex = idx
+    building.nextSpawnIndex = (idx + 1) % ROCKET_TURRET_MUZZLE_OFFSETS.length
+  }
   // Use image-based spawn points if available
   if (gameState.useTurretImages && turretImagesAvailable(building.type)) {
     const cfg = getTurretImageConfig(building.type)
@@ -537,8 +580,12 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
       building.muzzleFlashIndex = idx
       building.nextSpawnIndex = (idx + 1) % points.length
     }
-  } else {
+  } else if (building.type !== 'rocketTurret') {
     building.muzzleFlashIndex = 0
+  }
+
+  if (!spendTurretAmmo(building, 1)) {
+    return
   }
 
   // Create a bullet object with all required properties

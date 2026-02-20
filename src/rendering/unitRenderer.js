@@ -996,7 +996,7 @@ export class UnitRenderer {
 
       if (reloadRatio !== null) {
         const reloadLineY = barTop + barHeight - (barHeight * reloadRatio)
-        ctx.strokeStyle = '#87CEEB'
+        ctx.strokeStyle = '#FF0000'
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(barX, reloadLineY)
@@ -1012,14 +1012,14 @@ export class UnitRenderer {
     const hudBounds = this.getSelectedHudBounds(centerX, centerY)
     this.drawHudEdgeBar(ctx, hudBounds, 'left', ratio, barColor)
 
-    // Draw reload indicator overlay for rocket tanks (light blue 1px line)
+    // Draw reload indicator overlay for rocket tanks (red 1px line)
     if (reloadRatio !== null && !this.isDonutSelectionHud()) {
       const barThickness = this.getSelectionHudBarThickness()
       const barSpan = TILE_SIZE * 0.75
       const barY = ((hudBounds.top + hudBounds.bottom) / 2) - (barSpan / 2)
       const barX = hudBounds.left - (barThickness / 2)
       const reloadLineY = barY + barSpan - (barSpan * reloadRatio)
-      ctx.strokeStyle = '#87CEEB' // Light blue
+      ctx.strokeStyle = '#FF0000' // Light blue
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(barX, reloadLineY)
