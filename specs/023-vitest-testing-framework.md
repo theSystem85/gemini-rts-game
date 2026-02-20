@@ -189,3 +189,7 @@ describe('Building Placement', () => {
   })
 })
 ```
+
+## 2026-02 Smoke Test Stability Update
+- Updated `tests/setup.js` to patch `HTMLCanvasElement.prototype.getContext` in addition to `document.createElement('canvas')` so pre-existing canvases from static HTML are mocked consistently in jsdom.
+- This prevents jsdom "Not implemented: HTMLCanvasElement's getContext()" noise during `npm run test:smoke` while keeping rendering behavior deterministic.

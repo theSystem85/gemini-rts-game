@@ -208,3 +208,4 @@
 
 - [x] Ensure in mobile condensed production rows that default/inactive build buttons stay hidden until they become active or unlocked.
 - [x] Ensure in mobile portrait that long-press production tooltips do not open when the user is dragging a build button (drag-to-build gesture).
+- [x] Fix integration smoke test canvas mocking by patching `HTMLCanvasElement.prototype.getContext` so jsdom-created canvases in `index.html` no longer emit "Not implemented" startup errors.
