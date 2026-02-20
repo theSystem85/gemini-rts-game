@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Ensure `ammo` cheat applies to selected defense buildings with ammo bars, supports absolute and relative (+/- number or %) ammo values for units/buildings, and update modal cheat text.
 - [x] Fix tank movement loop audio lifecycle: stop immediately on halt and prevent same-unit overlapping loop instances that caused runaway loudness.
 - [x] Ensure movement loop audio (engine/rotor) fades out immediately when a unit stops moving.
 - [x] ✅ Fix `npm run lint:fix:changed` filename truncation bug where root-level unstaged files could lose their first character (e.g. `playwright.config.js` became `laywright.config.js`) due to trimming git porcelain status lines before slicing.

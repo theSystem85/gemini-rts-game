@@ -19,3 +19,6 @@
 - Building spawn applies immediate placement to the map grid, occupancy map, and building list, then refreshes power supply state.
 
 - Added `xp [amount]`, `xp +[amount]`, and `xp -[amount]` cheat command support to set absolute XP or apply relative XP adjustments for selected combat units.
+
+- Ammo cheat help text now documents absolute and relative forms (`value`, `percent%`, `+/-value`, `+/-percent%`) and clarifies it applies to selected units and ammo-bar buildings.
+- `ammo` command now supports absolute and relative adjustments for both unit ammo pools (`ammunition`/Apache `rocketAmmo`) and building ammo reserves (`ammo` with `maxAmmo`).
