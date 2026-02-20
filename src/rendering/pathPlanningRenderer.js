@@ -219,6 +219,8 @@ export class PathPlanningRenderer {
         let prevX = unit.x + TILE_SIZE / 2
         let prevY = unit.y + TILE_SIZE / 2
 
+        const localAvoidanceSteps = Math.max(0, Math.min(unit.path.length, unit.localAvoidanceRemainingSteps || 0))
+
         unit.path.forEach((tile, idx) => {
           const targetX = tile.x * TILE_SIZE + TILE_SIZE / 2
           const targetY = tile.y * TILE_SIZE + TILE_SIZE / 2
@@ -227,16 +229,21 @@ export class PathPlanningRenderer {
           const screenPrevY = prevY - scrollOffset.y
           const screenX = targetX - scrollOffset.x
           const screenY = targetY - scrollOffset.y
+          const isLocalAvoidanceSegment = idx < localAvoidanceSteps
 
           ctx.save()
-          ctx.strokeStyle = 'rgba(255, 165, 0, 0.5)'
-          ctx.lineWidth = 1
+          ctx.strokeStyle = isLocalAvoidanceSegment
+            ? 'rgba(80, 170, 255, 0.8)'
+            : 'rgba(255, 165, 0, 0.5)'
+          ctx.lineWidth = isLocalAvoidanceSegment ? 2 : 1
           ctx.beginPath()
           ctx.moveTo(screenPrevX, screenPrevY)
           ctx.lineTo(screenX, screenY)
           ctx.stroke()
 
-          drawTriangleIndicator(screenX, screenY, idx)
+          drawTriangleIndicator(screenX, screenY, idx, isLocalAvoidanceSegment
+            ? { fillStyle: 'rgba(80, 170, 255, 0.7)', strokeStyle: 'rgba(30, 120, 230, 0.95)' }
+            : undefined)
           ctx.restore()
 
           prevX = targetX

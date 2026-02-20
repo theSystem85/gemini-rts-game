@@ -357,6 +357,13 @@ export function updateUnitPosition(unit, mapGrid, occupancyMap, now, units = [],
 
     if (distance < waypointReachDistance) {
       unit.path.shift()
+      if (unit.isDodging && unit.localAvoidanceRemainingSteps > 0) {
+        unit.localAvoidanceRemainingSteps = Math.max(0, unit.localAvoidanceRemainingSteps - 1)
+        if (unit.localAvoidanceRemainingSteps === 0) {
+          unit.isDodging = false
+          unit.dodgeEndTime = null
+        }
+      }
 
       const humanPlayer = gameState.humanPlayer || 'player1'
       const isPlayerUnit = unit.owner === humanPlayer || (humanPlayer === 'player1' && unit.owner === 'player')
