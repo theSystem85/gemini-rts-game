@@ -107,7 +107,8 @@ globalThis.AudioContext = class MockAudioContext {
 
 // Mock canvas and WebGL context
 class MockCanvasRenderingContext2D {
-  constructor() {
+  constructor(canvas = null) {
+    this.canvas = canvas || { width: 0, height: 0 }
     this.fillStyle = ''
     this.strokeStyle = ''
     this.lineWidth = 1
@@ -210,6 +211,17 @@ class MockWebGLRenderingContext {
 }
 
 // Override canvas getContext
+if (globalThis.HTMLCanvasElement?.prototype) {
+  globalThis.HTMLCanvasElement.prototype.getContext = function(contextType) {
+    if (contextType === '2d') {
+      return new MockCanvasRenderingContext2D(this)
+    } else if (contextType === 'webgl' || contextType === 'webgl2') {
+      return new MockWebGLRenderingContext()
+    }
+    return null
+  }
+}
+
 const originalCreateElement = document.createElement.bind(document)
 document.createElement = function(tagName, options) {
   const element = originalCreateElement(tagName, options)
@@ -217,7 +229,7 @@ document.createElement = function(tagName, options) {
   if (tagName.toLowerCase() === 'canvas') {
     element.getContext = function(contextType) {
       if (contextType === '2d') {
-        return new MockCanvasRenderingContext2D()
+        return new MockCanvasRenderingContext2D(this)
       } else if (contextType === 'webgl' || contextType === 'webgl2') {
         return new MockWebGLRenderingContext()
       }
