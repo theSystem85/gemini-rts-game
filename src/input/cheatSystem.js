@@ -147,7 +147,7 @@ export class CheatSystem {
             <li><code>status</code> - Show current cheat status</li>
             <li><code>fuel [amount|percent%]</code> - Set fuel level of selected unit</li>
             <li><code>medics [amount]</code> - Set medic count of selected ambulance(s)</li>
-            <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s)</li>
+            <li><code>ammo [amount|percent%]</code> - Set ammo level of selected unit(s) or defense buildings with ammo bars</li>
             <li><code>ammo load [amount|percent%]</code> - Set ammo cargo of selected ammunition trucks or ammo reserves of selected helipads</li>
             <li><code>xp [amount]</code> / <code>xp +[amount]</code> / <code>xp -[amount]</code> - Set or adjust XP for selected combat units</li>
             <li><code>partyme [party]</code> - Switch your player party (reassigns your forces)</li>
@@ -1039,34 +1039,43 @@ export class CheatSystem {
     }
 
     let appliedCount = 0
-    this.selectedUnits.forEach(unit => {
-      if (unit.type === 'apache' && typeof unit.maxRocketAmmo === 'number') {
-        const target = isPercent ? unit.maxRocketAmmo * value : value
-        const clamped = Math.max(0, Math.min(target, unit.maxRocketAmmo))
-        unit.rocketAmmo = clamped
-        if (typeof unit.maxAmmunition === 'number') {
-          unit.ammunition = clamped
+    this.selectedUnits.forEach(target => {
+      if (target.type === 'apache' && typeof target.maxRocketAmmo === 'number') {
+        const targetAmmo = isPercent ? target.maxRocketAmmo * value : value
+        const clamped = Math.max(0, Math.min(targetAmmo, target.maxRocketAmmo))
+        target.rocketAmmo = clamped
+        if (typeof target.maxAmmunition === 'number') {
+          target.ammunition = clamped
         }
-        unit.apacheAmmoEmpty = clamped === 0
-        unit.canFire = clamped > 0
+        target.apacheAmmoEmpty = clamped === 0
+        target.canFire = clamped > 0
         if (clamped > 0) {
-          unit.noAmmoNotificationShown = false
+          target.noAmmoNotificationShown = false
         }
         appliedCount++
-      } else if (typeof unit.maxAmmunition === 'number') {
-        const target = isPercent ? unit.maxAmmunition * value : value
-        const clamped = Math.max(0, Math.min(target, unit.maxAmmunition))
-        unit.ammunition = clamped
-        if (clamped > 0) unit.noAmmoNotificationShown = false // Reset notification flag
+      } else if (typeof target.maxAmmunition === 'number') {
+        const targetAmmo = isPercent ? target.maxAmmunition * value : value
+        const clamped = Math.max(0, Math.min(targetAmmo, target.maxAmmunition))
+        target.ammunition = clamped
+        if (clamped > 0) target.noAmmoNotificationShown = false // Reset notification flag
+        appliedCount++
+      } else if (typeof target.maxAmmo === 'number') {
+        // Buildings with ammo bars (e.g. helipad + future defense structures)
+        const targetAmmo = isPercent ? target.maxAmmo * value : value
+        const clamped = Math.max(0, Math.min(targetAmmo, target.maxAmmo))
+        target.ammo = clamped
+        if (typeof target.needsAmmo === 'boolean') {
+          target.needsAmmo = clamped < (target.maxAmmo * 0.25)
+        }
         appliedCount++
       }
     })
 
     if (appliedCount > 0) {
-      showNotification(`🔫 Ammo set to ${display} for ${appliedCount} unit${appliedCount > 1 ? 's' : ''}`, 3000)
+      showNotification(`🔫 Ammo set to ${display} for ${appliedCount} selection${appliedCount > 1 ? 's' : ''}`, 3000)
       playSound('confirmed', 0.5)
     } else {
-      this.showError('No units with ammunition selected')
+      this.showError('No selected units or buildings with ammunition found')
     }
   }
 

@@ -1,4 +1,5 @@
 ## Bugs
+- [x] Extend `ammo` cheat so it also applies to selected defense buildings that expose an ammo bar (`maxAmmo`/`ammo`), not just units.
 - [x] Fix tank movement loop audio lifecycle: stop immediately on halt and prevent same-unit overlapping loop instances that caused runaway loudness.
 - [x] Ensure movement loop audio (engine/rotor) fades out immediately when a unit stops moving.
 - [x] ✅ Fix `npm run lint:fix:changed` filename truncation bug where root-level unstaged files could lose their first character (e.g. `playwright.config.js` became `laywright.config.js`) due to trimming git porcelain status lines before slicing.
@@ -122,6 +123,7 @@
 - [x] ✅ Fixed standard tanks slowing to a crawl in range. `updateTankCombat` used a rocket-range override, causing stop/start oscillation with movement pathing. Removed the override so tanks stop at their actual effective range.
 - [x] ✅ Paused attack pathfinding while a tank is remote controlled and delayed auto-movement for 1s after remote control stops.
 ## Bugs
+- [x] Ensure rocket turret 6-rocket bursts cycle through six distinct muzzle coordinates `(60,40)`, `(60,73)`, `(60,107)`, `(130,40)`, `(130,73)`, `(130,107)` using each rocket sprite center as the spawn anchor.
 - [x] Ensure user docs modal on mobile portrait respects top safe-area inset, spans full screen width, and renders above the tutorial overlay; move docs/settings/cheats buttons above Multiplayer in the sidebar.
 - [x] Fix service worker cache writes for partial-content (HTTP 206) responses to prevent `Cache.put` runtime errors at startup.
 - [x] Align Apache helicopter selection hits with the rendered helicopter/HUD so clicks are not required between the image and its shadow.

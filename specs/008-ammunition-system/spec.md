@@ -617,6 +617,7 @@ This specification defines a comprehensive ammunition management system for the 
 - **src/game/helipadLogic.js** - Extend Helipad with ammunition reserve storage (250 rounds) and transfer logic to landed helicopters
 - **src/game/unitCombat.js** - Implement Apache-specific ammo checking using `rocketAmmo` field, enforce 180ms volley delay
 - **src/input/cheatSystem.js** - Support ammo manipulation for both `ammunition` and `rocketAmmo` fields, handle Apache helicopters correctly
+- **FR-EXTRA-CHEAT-01**: The `ammo` cheat command MUST apply to selected ammo-bearing units (`ammunition` / `rocketAmmo`) and selected ammo-bearing buildings (`maxAmmo` / `ammo`, including defense buildings with ammo bars).
 - **src/saveGame.js** - Serialize/deserialize ammunition states, truck cargo, Helipad reserves
 - **public/images/map/buildings/ammunition_factory_map.webp** - Ammunition Factory map sprite
 - **public/images/sidebar/ammunition_factory_sidebar.webp** - Ammunition Factory build button sprite

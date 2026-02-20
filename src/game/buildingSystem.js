@@ -13,6 +13,16 @@ import { logPerformance } from '../performanceUtils.js'
 import { gameRandom } from '../utils/gameRandom.js'
 import { recordDestroyed } from '../ai-api/transitionCollector.js'
 
+const ROCKET_TURRET_IMAGE_COORDS_SIZE = 192
+const ROCKET_TURRET_MUZZLE_OFFSETS = [
+  { x: 60, y: 40 },
+  { x: 60, y: 73 },
+  { x: 60, y: 107 },
+  { x: 130, y: 40 },
+  { x: 130, y: 73 },
+  { x: 130, y: 107 }
+]
+
 /**
  * Updates all buildings including health checks, destruction, and defensive capabilities
  * @param {Object} gameState - Game state object
@@ -516,6 +526,24 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
   let spawnX = centerX + Math.cos(building.turretDirection) * (TILE_SIZE * 0.75)
   let spawnY = centerY + Math.sin(building.turretDirection) * (TILE_SIZE * 0.75)
 
+  // Rocket turret launch points are defined in image-space coordinates and
+  // mapped to the 2x2-tile rendered building footprint.
+  if (building.type === 'rocketTurret') {
+    const idx = building.nextSpawnIndex || 0
+    const pt = ROCKET_TURRET_MUZZLE_OFFSETS[idx % ROCKET_TURRET_MUZZLE_OFFSETS.length]
+    const buildingWidth = building.width * TILE_SIZE
+    const buildingHeight = building.height * TILE_SIZE
+    const buildingScreenX = building.x * TILE_SIZE
+    const buildingScreenY = building.y * TILE_SIZE
+    const scaleX = buildingWidth / ROCKET_TURRET_IMAGE_COORDS_SIZE
+    const scaleY = buildingHeight / ROCKET_TURRET_IMAGE_COORDS_SIZE
+
+    // Spawn position represents the rocket sprite center.
+    spawnX = buildingScreenX + pt.x * scaleX
+    spawnY = buildingScreenY + pt.y * scaleY
+    building.muzzleFlashIndex = idx
+    building.nextSpawnIndex = (idx + 1) % ROCKET_TURRET_MUZZLE_OFFSETS.length
+  }
   // Use image-based spawn points if available
   if (gameState.useTurretImages && turretImagesAvailable(building.type)) {
     const cfg = getTurretImageConfig(building.type)
@@ -537,7 +565,7 @@ function fireTurretProjectile(building, target, centerX, centerY, now, bullets, 
       building.muzzleFlashIndex = idx
       building.nextSpawnIndex = (idx + 1) % points.length
     }
-  } else {
+  } else if (building.type !== 'rocketTurret') {
     building.muzzleFlashIndex = 0
   }
 
