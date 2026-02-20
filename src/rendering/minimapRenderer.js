@@ -19,11 +19,12 @@ export class MinimapRenderer {
     this.cachedMapHeight = 0
     this.cacheDirty = true
 
-    // Cache for the "radar offline" noise to avoid regenerating it each frame
+    // Cache for the "radar offline" noise base layer; animated via scrolling overlays
     this.radarOfflineCanvas = document.createElement('canvas')
     this.radarOfflineCtx = this.radarOfflineCanvas.getContext('2d')
     this.cachedOfflineWidth = 0
     this.cachedOfflineHeight = 0
+    this.radarOfflineAnimationStart = performance.now()
   }
 
   invalidateCache() {
@@ -387,7 +388,6 @@ export class MinimapRenderer {
       ctx.textBaseline = 'middle'
       ctx.fillText('RADAR OFFLINE', minimapWidth / 2, minimapHeight / 2)
 
-      ctx.fillStyle = '#ffffff'
       for (let i = 0; i < 300; i++) {
         const x = gameRandom() * minimapWidth
         const y = gameRandom() * minimapHeight
@@ -396,9 +396,41 @@ export class MinimapRenderer {
         ctx.fillStyle = `rgba(255,255,255,${opacity})`
         ctx.fillRect(x, y, size, size)
       }
+
+      this.radarOfflineAnimationStart = performance.now()
     }
 
     minimapCtx.drawImage(this.radarOfflineCanvas, 0, 0)
+
+    const now = performance.now()
+    const elapsedSeconds = (now - this.radarOfflineAnimationStart) / 1000
+
+    // Animated CRT grain pass: scroll the cached noise texture at different rates
+    const grainShiftX = (elapsedSeconds * 33) % minimapWidth
+    const grainShiftY = (elapsedSeconds * 19) % minimapHeight
+    minimapCtx.save()
+    minimapCtx.globalAlpha = 0.18
+    minimapCtx.globalCompositeOperation = 'screen'
+    minimapCtx.drawImage(this.radarOfflineCanvas, -grainShiftX, -grainShiftY)
+    minimapCtx.drawImage(this.radarOfflineCanvas, minimapWidth - grainShiftX, -grainShiftY)
+    minimapCtx.drawImage(this.radarOfflineCanvas, -grainShiftX, minimapHeight - grainShiftY)
+    minimapCtx.drawImage(
+      this.radarOfflineCanvas,
+      minimapWidth - grainShiftX,
+      minimapHeight - grainShiftY
+    )
+    minimapCtx.restore()
+
+    // Light scanline sweep to reinforce "offline monitor" animation feedback.
+    const sweepY = (elapsedSeconds * 52) % minimapHeight
+    minimapCtx.save()
+    const sweepGradient = minimapCtx.createLinearGradient(0, sweepY - 10, 0, sweepY + 10)
+    sweepGradient.addColorStop(0, 'rgba(255,255,255,0)')
+    sweepGradient.addColorStop(0.5, 'rgba(255,255,255,0.1)')
+    sweepGradient.addColorStop(1, 'rgba(255,255,255,0)')
+    minimapCtx.fillStyle = sweepGradient
+    minimapCtx.fillRect(0, sweepY - 10, minimapWidth, 20)
+    minimapCtx.restore()
   }
 
   installTileWatchers(mapGrid) {
