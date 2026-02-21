@@ -1,3 +1,4 @@
+- [x] Improve mobile chain-build planning UX: two-finger tap release now instantly cancels planning (without cancelling two-finger drag panning), edge auto-scroll speed reduced to ~33%, and ready-to-place build button highlight made more visually dominant.
 - [x] Ensure all build/production button labels use the global futuristic font and automatically fall back to existing mobile short building labels when desktop text overflows.
 - [x] Apply Rajdhani to sidebar build tabs (desktop/mobile), map settings/edit/shuffle buttons, invite/join controls, save/invite placeholders, all sidebar input fields, and user docs with a 14px minimum.
 - [x] Apply a globally consistent open-source futuristic font (compact footprint) across CSS UI and canvas-rendered in-game text.
