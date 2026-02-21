@@ -10,7 +10,7 @@ let tooltipListenersAttached = false
 let tooltipOpen = false
 
 function getMoneyBarGradient() {
-  return 'linear-gradient(90deg, #FFA500 0%, rgba(255, 255, 255, 0.2) 100%)'
+  return 'linear-gradient(90deg, #d18100 0%, #ffd489 100%)'
 }
 
 function ensureMoneyTooltip() {

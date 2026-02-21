@@ -1,3 +1,4 @@
+- [x] Follow-up polish: make sidebar money/power gradients end brighter (not darker) and use the same desktop sidebar gradient on mobile portrait expanded + condensed sidebars.
 - [x] Add a subtle horizontal gradient to sidebar money/power bars (desktop + mobile portrait) and remove rounded corners from the expanded portrait radar/minimap.
 - [x] Ensure all build/production button labels use the global futuristic font and automatically fall back to existing mobile short building labels when desktop text overflows.
 - [x] Apply Rajdhani to sidebar build tabs (desktop/mobile), map settings/edit/shuffle buttons, invite/join controls, save/invite placeholders, all sidebar input fields, and user docs with a 14px minimum.

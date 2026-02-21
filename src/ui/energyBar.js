@@ -3,8 +3,8 @@
 
 import { gameState } from '../gameState.js'
 
-function getEnergyBarGradient(baseColor) {
-  return `linear-gradient(90deg, ${baseColor} 0%, rgba(255, 255, 255, 0.18) 100%)`
+function getEnergyBarGradient(startColor, endColor) {
+  return `linear-gradient(90deg, ${startColor} 0%, ${endColor} 100%)`
 }
 
 // Add power indicator to sidebar with energy bar
@@ -38,7 +38,7 @@ export function addPowerIndicator() {
   energyBar.style.left = '0'
   energyBar.style.height = '100%'
   energyBar.style.width = '100%'
-  energyBar.style.background = getEnergyBarGradient('#4CAF50')
+  energyBar.style.background = getEnergyBarGradient('#3f8f44', '#7ce284')
 
   // Create energy text/value overlay
   const energyText = document.createElement('div')
@@ -136,27 +136,27 @@ export function updateEnergyBar() {
   // Update bar color based on percentage thresholds
   if (energyPercentage <= 10) {
     // Below 10% - Red
-    energyBar.style.background = getEnergyBarGradient('#F44336')
+    energyBar.style.background = getEnergyBarGradient('#c9352b', '#ff8a80')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.background = getEnergyBarGradient('#F44336')
+      mobileEnergyBar.style.background = getEnergyBarGradient('#c9352b', '#ff8a80')
     }
   } else if (energyPercentage <= 25) {
     // Below 25% - Orange
-    energyBar.style.background = getEnergyBarGradient('#FF9800')
+    energyBar.style.background = getEnergyBarGradient('#d57b00', '#ffc46b')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.background = getEnergyBarGradient('#FF9800')
+      mobileEnergyBar.style.background = getEnergyBarGradient('#d57b00', '#ffc46b')
     }
   } else if (energyPercentage <= 50) {
     // Below 50% - Yellow
-    energyBar.style.background = getEnergyBarGradient('#FFEB3B')
+    energyBar.style.background = getEnergyBarGradient('#cbbb2f', '#fff48a')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.background = getEnergyBarGradient('#FFEB3B')
+      mobileEnergyBar.style.background = getEnergyBarGradient('#cbbb2f', '#fff48a')
     }
   } else {
     // Above 50% - Green
-    energyBar.style.background = getEnergyBarGradient('#4CAF50')
+    energyBar.style.background = getEnergyBarGradient('#3f8f44', '#7ce284')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.background = getEnergyBarGradient('#4CAF50')
+      mobileEnergyBar.style.background = getEnergyBarGradient('#3f8f44', '#7ce284')
     }
   }
 
