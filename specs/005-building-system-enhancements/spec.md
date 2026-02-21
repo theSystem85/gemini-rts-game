@@ -70,6 +70,8 @@ As a player, I want to drag building buttons while holding shift to create lines
 8. **Given** CBM is active, **When** used, **Then** normal building mode and blueprint mode continue working without interference
 9. **Given** mobile touch input and a ready building in placement mode, **When** player press-holds on a tile, drags, and releases, **Then** chain preview is shown during hold/drag and all planned buildings are queued in draw order on release
 10. **Given** mobile chain placement is released, **When** buildings are queued, **Then** the sidebar build button bulk counter updates immediately and remains accurate until the bulk queue completes
+11. **Given** mobile chain-planning mode is active, **When** player draws a curved/freeform touch path, **Then** planning tiles follow the painted path (not only straight lines) and queued buildings preserve painted order on release
+12. **Given** mobile chain-planning mode is active, **When** player drags near map edges, **Then** auto-scroll follows the same direction as the drag path and selection-rectangle rendering remains disabled during painting
 
 ---
 
@@ -218,6 +220,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-049**: System MUST add selected-state ammunition bars and 1px red reload indicators for defensive turrets (`turretGunV1`, `turretGunV2`, `turretGunV3`, `rocketTurret`, `artilleryTurret`) using each turret's ammo/cooldown state.
 - **FR-050**: System MUST require ammunition for defensive turret firing and support ammunition-truck resupply (auto-targeting empty allied turrets and manual bidirectional click interactions with move-into cursor feedback).
 - **FR-051**: System MUST support a mobile chain-build gesture in building placement mode: press-and-hold a start tile to activate chain preview, drag to extend the line, and place all valid buildings in sequence on touch release while updating the build-button bulk counter for the queued amount.
+- **FR-052**: System MUST support freeform mobile bulk-building painting (non-linear strokes), suppress unit selection rectangle while painting, and keep edge auto-scroll aligned with the drag direction during planning.
 
 ### Key Entities
 

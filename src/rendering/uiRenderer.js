@@ -122,7 +122,7 @@ export class UIRenderer {
 
   renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units) {
     // Draw building placement overlay if in placement mode
-    if (gameState.buildingPlacementMode && gameState.currentBuildingType) {
+    if (gameState.buildingPlacementMode && gameState.currentBuildingType && !gameState.mobileBuildPaintMode) {
       const buildingInfo = buildingData[gameState.currentBuildingType]
 
       if (buildingInfo) {
@@ -203,6 +203,63 @@ export class UIRenderer {
       positions.push({ x: startX + stepX * i, y: startY + stepY * i })
     }
     return positions
+  }
+
+
+  renderMobileBuildPaintPlacement(ctx, gameState, scrollOffset, mapGrid, units) {
+    if (!gameState.mobileBuildPaintMode || !gameState.mobileBuildPaintType) return
+
+    const info = buildingData[gameState.mobileBuildPaintType]
+    const tiles = Array.isArray(gameState.mobileBuildPaintTiles) ? gameState.mobileBuildPaintTiles : []
+    if (!info || tiles.length === 0) return
+
+    const occ = new Set()
+    ;(gameState.blueprints || []).forEach(bp => {
+      const bi = buildingData[bp.type]
+      if (!bi) return
+      for (let y = 0; y < bi.height; y++) {
+        for (let x = 0; x < bi.width; x++) {
+          occ.add(`${bp.x + x},${bp.y + y}`)
+        }
+      }
+    })
+
+    tiles.forEach(pos => {
+      let valid = true
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          const tx = pos.x + x
+          const ty = pos.y + y
+          if (!isTileValid(tx, ty, mapGrid, units, [], [], gameState.mobileBuildPaintType) || occ.has(`${tx},${ty}`)) {
+            valid = false
+            break
+          }
+        }
+        if (!valid) break
+      }
+
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          const tx = pos.x + x
+          const ty = pos.y + y
+          const screenX = tx * TILE_SIZE - scrollOffset.x
+          const screenY = ty * TILE_SIZE - scrollOffset.y
+          ctx.fillStyle = valid ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)'
+          ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = 1
+          ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE)
+        }
+      }
+
+      if (valid) {
+        for (let y = 0; y < info.height; y++) {
+          for (let x = 0; x < info.width; x++) {
+            occ.add(`${pos.x + x},${pos.y + y}`)
+          }
+        }
+      }
+    })
   }
 
   renderChainPlacement(ctx, gameState, scrollOffset, mapGrid, units) {
@@ -624,6 +681,7 @@ export class UIRenderer {
     this.renderBlueprints(ctx, gameState.blueprints || [], scrollOffset)
     this.renderBuildingPlacement(ctx, gameState, scrollOffset, buildings, factories, mapGrid, units)
     this.renderChainPlacement(ctx, gameState, scrollOffset, mapGrid, units)
+    this.renderMobileBuildPaintPlacement(ctx, gameState, scrollOffset, mapGrid, units)
     renderMapEditorOverlay(ctx, scrollOffset)
   }
 }

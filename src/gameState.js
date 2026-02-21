@@ -93,6 +93,11 @@ export const gameState = {
   chainStartY: 0,
   chainBuildingType: null,
   chainBuildingButton: null,
+  // Mobile freeform bulk building planning state
+  mobileBuildPaintMode: false,
+  mobileBuildPaintType: null,
+  mobileBuildPaintButton: null,
+  mobileBuildPaintTiles: [],
   shiftKeyDown: false,
   // Track option/alt key state for path planning
   altKeyDown: false,

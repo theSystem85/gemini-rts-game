@@ -112,6 +112,10 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
     if (event.pointerType !== 'touch') {
       return
     }
+    if (gameState.mobileBuildPaintMode) {
+      event.preventDefault()
+      return
+    }
     event.preventDefault()
     const touchState = {
       pointerId: event.pointerId,
@@ -133,6 +137,10 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
 
   gameCanvas.addEventListener('pointermove', (event) => {
     if (event.pointerType !== 'touch') {
+      return
+    }
+    if (gameState.mobileBuildPaintMode) {
+      event.preventDefault()
       return
     }
     const touchState = activePointers.get(event.pointerId)
@@ -171,6 +179,10 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
 
   const handlePointerEnd = (event) => {
     if (event.pointerType !== 'touch') {
+      return
+    }
+    if (gameState.mobileBuildPaintMode) {
+      event.preventDefault()
       return
     }
     const touchState = activePointers.get(event.pointerId)
