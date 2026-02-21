@@ -1,3 +1,4 @@
+- [x] Ensure mobile chain planning mode is cancelled by a two-finger tap anywhere on the map canvas, while two-finger drag continues to pan the map without cancelling planning mode.
 ## Bugs
 - [x] Ensure `ammo` cheat applies to selected defense buildings with ammo bars, supports absolute and relative (+/- number or %) ammo values for units/buildings, and update modal cheat text.
 - [x] Fix tank movement loop audio lifecycle: stop immediately on halt and prevent same-unit overlapping loop instances that caused runaway loudness.

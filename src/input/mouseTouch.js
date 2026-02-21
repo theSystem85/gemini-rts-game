@@ -1,5 +1,6 @@
 import { gameState } from '../gameState.js'
 import { suspendRemoteControlAutoFocus } from '../game/remoteControl.js'
+import { handleAltKeyRelease } from '../game/waypointSounds.js'
 import {
   createSyntheticMouseEvent,
   createSyntheticMouseEventFromCoords,
@@ -53,7 +54,10 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
     const center = getTouchCenter(pointerIds, activePointers)
     handler.twoFingerPan = {
       pointerIds,
-      lastCenter: center
+      lastCenter: center,
+      startCenter: center,
+      maxDistanceFromStart: 0,
+      startedAt: performance.now()
     }
     suspendRemoteControlAutoFocus()
     pointerIds.forEach(id => {
@@ -79,6 +83,13 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
       return
     }
     const center = getTouchCenter(pointerIds, activePointers)
+    if (handler.twoFingerPan.startCenter) {
+      const distance = Math.hypot(
+        center.x - handler.twoFingerPan.startCenter.x,
+        center.y - handler.twoFingerPan.startCenter.y
+      )
+      handler.twoFingerPan.maxDistanceFromStart = Math.max(handler.twoFingerPan.maxDistanceFromStart, distance)
+    }
     handler.twoFingerPan.lastCenter = center
     const synthetic = createSyntheticMouseEventFromCoords(gameCanvas, center.x, center.y, 2)
     handler.handleRightDragScrolling(synthetic, mapGrid, gameCanvas)
@@ -86,8 +97,17 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
 
   const endTwoFingerPan = (event) => {
     if (!handler.twoFingerPan) return
+    const tapDuration = performance.now() - handler.twoFingerPan.startedAt
+    const movedDistance = handler.twoFingerPan.maxDistanceFromStart
+    const isTwoFingerTap = tapDuration <= 280 && movedDistance <= 8
     const synthetic = createSyntheticMouseEvent(event, gameCanvas, 2)
     handler.handleRightMouseUp(synthetic, units, factories, selectedUnits, selectionManager, cursorManager)
+
+    if (isTwoFingerTap && gameState.altKeyDown) {
+      gameState.altKeyDown = false
+      handleAltKeyRelease()
+    }
+
     const endedTouch = activePointers.get(event.pointerId)
     if (endedTouch) {
       endedTouch.skipTapAfterPan = true
