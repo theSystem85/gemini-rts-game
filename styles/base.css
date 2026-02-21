@@ -1290,6 +1290,16 @@ body.mobile-portrait #actions .action-button.icon-button:hover {
   transform: none;
 }
 
+
+body.mobile-portrait:not(.sidebar-condensed):not(.sidebar-collapsed) #actions #repairBtn.active img {
+  filter: brightness(0) saturate(100%) invert(70%) sepia(21%) saturate(1283%) hue-rotate(73deg)
+    brightness(97%) contrast(93%);
+}
+
+body.mobile-portrait:not(.sidebar-condensed):not(.sidebar-collapsed) #actions #sellBtn.active .button-icon {
+  color: #7be88a;
+}
+
 #controlGroupsBtn .group-icon {
   display: inline-flex;
   align-items: center;

@@ -23,6 +23,7 @@
 - [ ] Follow-up HUD tweak: constrain selected-unit edge bars to max 75% tile span so 1px selection outline remains visible, and center crew indicators horizontally beneath the bottom bar.
 - [ ] Refactor selected-unit HUD: 1px yellow outline, 3px stat bars (ammo/hp/fuel/load/xp) centered on outline with dark grey background and no borders, move crew indicator below bottom bar, place XP stars overlapping HP bar by ~33%, and enlarge HUD footprint beyond tile size to avoid occluding the selected unit.
 ## Improvements
+- [x] Ensure expanded sidebar repair/sell active state is visibly highlighted in green (matching condensed sidebar behavior).
 - [x] Remove borders from expanded sidebar action buttons, keep them square, and enforce spaced flex container layout to match the settings-button style.
 - [x] Expand OpenAI API key settings with security-critical disclosure (hover/focus), dedicated limited-permission key guidance, localStorage/XSS risk warning, official OpenAI safety link, low-cost model recommendation, and explicit at-your-own-risk opt-in checkbox before key entry.
 - [x] Move the mobile landscape notification bell icon from top-right to the top-left safe-area position.

@@ -8,6 +8,7 @@ Align expanded sidebar action buttons with the settings-button visual language b
 - Expanded sidebar action buttons must be square (equal width/height).
 - The expanded sidebar actions row must use a flex layout with spacing between buttons.
 - Hover behavior should not reintroduce border-like outlines.
+- Expanded sidebar `Repair` and `Sell` active states must remain clearly visible, using the same green highlight language as condensed sidebar actions.
 
 ## Implementation Notes
 - Apply style updates in mobile portrait expanded sidebar selectors (`body.mobile-portrait #actions` and `body.mobile-portrait #actions .action-button.icon-button`).
