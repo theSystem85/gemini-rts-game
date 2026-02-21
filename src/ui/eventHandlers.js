@@ -36,6 +36,7 @@ export class EventHandlers {
     this.moneyEl = moneyEl
     this.gameInstance = gameInstance
     this.mobileChainBuildGesture = null
+    this.mobileTwoFingerCancelGesture = null
     this.mobileChainBuildSuppressClickUntil = 0
     this.mobilePlanLastTapTime = 0
     this.mobilePlanLastTapPos = null
@@ -236,7 +237,7 @@ export class EventHandlers {
 
     const HOLD_DELAY_MS = 220
     const EDGE_THRESHOLD = 28
-    const EDGE_SCROLL_SPEED = 12
+    const EDGE_SCROLL_SPEED = 4
 
     const resetGestureState = () => {
       if (this.mobileChainBuildGesture?.holdTimer) {
@@ -533,6 +534,78 @@ export class EventHandlers {
 
     gameCanvas.addEventListener('pointerup', finalizeMobileChainGesture, { passive: true })
     gameCanvas.addEventListener('pointercancel', finalizeMobileChainGesture, { passive: true })
+
+    const resetTwoFingerCancelGesture = () => {
+      this.mobileTwoFingerCancelGesture = null
+    }
+
+    gameCanvas.addEventListener('touchstart', (event) => {
+      if (!gameState.mobileBuildPaintMode) {
+        resetTwoFingerCancelGesture()
+        return
+      }
+
+      if (event.touches.length !== 2) {
+        if (event.touches.length > 2) {
+          resetTwoFingerCancelGesture()
+        }
+        return
+      }
+
+      const [firstTouch, secondTouch] = event.touches
+      this.mobileTwoFingerCancelGesture = {
+        startedAt: performance.now(),
+        firstTouchId: firstTouch.identifier,
+        secondTouchId: secondTouch.identifier,
+        firstStartX: firstTouch.clientX,
+        firstStartY: firstTouch.clientY,
+        secondStartX: secondTouch.clientX,
+        secondStartY: secondTouch.clientY,
+        moved: false
+      }
+    }, { passive: true })
+
+    gameCanvas.addEventListener('touchmove', (event) => {
+      const gesture = this.mobileTwoFingerCancelGesture
+      if (!gesture || event.touches.length !== 2 || gesture.moved) {
+        return
+      }
+
+      const firstTouch = Array.from(event.touches).find(touch => touch.identifier === gesture.firstTouchId)
+      const secondTouch = Array.from(event.touches).find(touch => touch.identifier === gesture.secondTouchId)
+      if (!firstTouch || !secondTouch) {
+        gesture.moved = true
+        return
+      }
+
+      const firstDistance = Math.hypot(firstTouch.clientX - gesture.firstStartX, firstTouch.clientY - gesture.firstStartY)
+      const secondDistance = Math.hypot(secondTouch.clientX - gesture.secondStartX, secondTouch.clientY - gesture.secondStartY)
+      if (firstDistance > 14 || secondDistance > 14) {
+        gesture.moved = true
+      }
+    }, { passive: true })
+
+    gameCanvas.addEventListener('touchend', () => {
+      const gesture = this.mobileTwoFingerCancelGesture
+      if (!gesture) {
+        return
+      }
+
+      if (!gameState.mobileBuildPaintMode) {
+        resetTwoFingerCancelGesture()
+        return
+      }
+
+      const elapsedMs = performance.now() - gesture.startedAt
+      if (!gesture.moved && elapsedMs <= 320) {
+        cancelMobilePlanningAndPlacement()
+        this.mobileChainBuildSuppressClickUntil = performance.now() + 250
+      }
+
+      resetTwoFingerCancelGesture()
+    }, { passive: true })
+
+    gameCanvas.addEventListener('touchcancel', resetTwoFingerCancelGesture, { passive: true })
   }
 
   setupMobileDropListeners() {
