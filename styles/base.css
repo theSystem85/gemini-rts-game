@@ -1262,7 +1262,7 @@ body.mobile-portrait #sidebarScroll {
 
 body.mobile-portrait #minimap {
   height: 130px;
-  border-radius: 10px;
+  border-radius: 0;
   margin-bottom: 12px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }

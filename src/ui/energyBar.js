@@ -3,6 +3,10 @@
 
 import { gameState } from '../gameState.js'
 
+function getEnergyBarGradient(baseColor) {
+  return `linear-gradient(90deg, ${baseColor} 0%, rgba(255, 255, 255, 0.18) 100%)`
+}
+
 // Add power indicator to sidebar with energy bar
 export function addPowerIndicator() {
   // Get the energy bar container that's already in the HTML
@@ -34,7 +38,7 @@ export function addPowerIndicator() {
   energyBar.style.left = '0'
   energyBar.style.height = '100%'
   energyBar.style.width = '100%'
-  energyBar.style.backgroundColor = '#4CAF50'
+  energyBar.style.background = getEnergyBarGradient('#4CAF50')
 
   // Create energy text/value overlay
   const energyText = document.createElement('div')
@@ -132,27 +136,27 @@ export function updateEnergyBar() {
   // Update bar color based on percentage thresholds
   if (energyPercentage <= 10) {
     // Below 10% - Red
-    energyBar.style.backgroundColor = '#F44336'
+    energyBar.style.background = getEnergyBarGradient('#F44336')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.backgroundColor = '#F44336'
+      mobileEnergyBar.style.background = getEnergyBarGradient('#F44336')
     }
   } else if (energyPercentage <= 25) {
     // Below 25% - Orange
-    energyBar.style.backgroundColor = '#FF9800'
+    energyBar.style.background = getEnergyBarGradient('#FF9800')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.backgroundColor = '#FF9800'
+      mobileEnergyBar.style.background = getEnergyBarGradient('#FF9800')
     }
   } else if (energyPercentage <= 50) {
     // Below 50% - Yellow
-    energyBar.style.backgroundColor = '#FFEB3B'
+    energyBar.style.background = getEnergyBarGradient('#FFEB3B')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.backgroundColor = '#FFEB3B'
+      mobileEnergyBar.style.background = getEnergyBarGradient('#FFEB3B')
     }
   } else {
     // Above 50% - Green
-    energyBar.style.backgroundColor = '#4CAF50'
+    energyBar.style.background = getEnergyBarGradient('#4CAF50')
     if (mobileEnergyBar) {
-      mobileEnergyBar.style.backgroundColor = '#4CAF50'
+      mobileEnergyBar.style.background = getEnergyBarGradient('#4CAF50')
     }
   }
 
