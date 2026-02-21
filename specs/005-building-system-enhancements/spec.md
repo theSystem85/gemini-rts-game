@@ -68,6 +68,8 @@ As a player, I want to drag building buttons while holding shift to create lines
 6. **Given** multiple lines are chained, **When** shift key is released, **Then** CBM terminates and no further chains are created
 7. **Given** chain of buildings is queued, **When** checking sidebar, **Then** build button stack counter increases by number of buildings in chain
 8. **Given** CBM is active, **When** used, **Then** normal building mode and blueprint mode continue working without interference
+9. **Given** mobile touch input and a ready building in placement mode, **When** player press-holds on a tile, drags, and releases, **Then** chain preview is shown during hold/drag and all planned buildings are queued in draw order on release
+10. **Given** mobile chain placement is released, **When** buildings are queued, **Then** the sidebar build button bulk counter updates immediately and remains accurate until the bulk queue completes
 
 ---
 
@@ -215,6 +217,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-048**: System MUST render rocket-turret muzzle flash at the active rocket spawn offset (same 6-point sequence used for projectile spawn), not the building center.
 - **FR-049**: System MUST add selected-state ammunition bars and 1px red reload indicators for defensive turrets (`turretGunV1`, `turretGunV2`, `turretGunV3`, `rocketTurret`, `artilleryTurret`) using each turret's ammo/cooldown state.
 - **FR-050**: System MUST require ammunition for defensive turret firing and support ammunition-truck resupply (auto-targeting empty allied turrets and manual bidirectional click interactions with move-into cursor feedback).
+- **FR-051**: System MUST support a mobile chain-build gesture in building placement mode: press-and-hold a start tile to activate chain preview, drag to extend the line, and place all valid buildings in sequence on touch release while updating the build-button bulk counter for the queued amount.
 
 ### Key Entities
 

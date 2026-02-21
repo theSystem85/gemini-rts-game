@@ -740,3 +740,4 @@
 - [x] Improve multiplayer network stability with heartbeat-based responsiveness checks, forced host/client pause while reconnecting, delayed AI takeover fallback, and reconnect timer visibility for hosts and clients (2-4 player compatible).
 - [x] Mobile landscape production category toggle now uses compact uppercase labels so "BUILDINGS" fits reliably, and building button labels use short forms only in mobile landscape (e.g., Vehicle Fab, Radar, Ammo Fab, Turret V1/V2/V3).
 - [x] Follow-up mobile landscape tweak: keep the BUILDINGS/UNITS toggle button position unchanged but left-align the toggle label text and reduce label font-size by 1px to avoid clipping.
+- [x] Add mobile bulk-planning for building placement: tap ready build button, press-and-hold a start tile, drag to preview a line, and place the full planned line on release while keeping the build-button bulk count in sync.
