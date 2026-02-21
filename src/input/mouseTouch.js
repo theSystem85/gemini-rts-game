@@ -112,7 +112,7 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
     if (event.pointerType !== 'touch') {
       return
     }
-    if (gameState.mobileBuildPaintMode) {
+    if (gameState.buildingPlacementMode || gameState.mobileBuildPaintMode) {
       event.preventDefault()
       return
     }
@@ -139,11 +139,18 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
     if (event.pointerType !== 'touch') {
       return
     }
-    if (gameState.mobileBuildPaintMode) {
+    const touchState = activePointers.get(event.pointerId)
+    if (gameState.buildingPlacementMode || gameState.mobileBuildPaintMode) {
       event.preventDefault()
+      if (touchState) {
+        cancelLongPress(touchState)
+      }
+      activePointers.delete(event.pointerId)
+      if (handler.twoFingerPan && handler.twoFingerPan.pointerIds.includes(event.pointerId)) {
+        handler.twoFingerPan = null
+      }
       return
     }
-    const touchState = activePointers.get(event.pointerId)
     if (!touchState) {
       return
     }
@@ -181,11 +188,18 @@ export function setupTouchEvents(handler, gameCanvas, units, factories, mapGrid,
     if (event.pointerType !== 'touch') {
       return
     }
-    if (gameState.mobileBuildPaintMode) {
+    const touchState = activePointers.get(event.pointerId)
+    if (gameState.buildingPlacementMode || gameState.mobileBuildPaintMode) {
       event.preventDefault()
+      if (touchState) {
+        cancelLongPress(touchState)
+      }
+      activePointers.delete(event.pointerId)
+      if (handler.twoFingerPan && handler.twoFingerPan.pointerIds.includes(event.pointerId)) {
+        handler.twoFingerPan = null
+      }
       return
     }
-    const touchState = activePointers.get(event.pointerId)
     if (!touchState) {
       return
     }

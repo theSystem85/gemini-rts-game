@@ -72,6 +72,8 @@ As a player, I want to drag building buttons while holding shift to create lines
 10. **Given** mobile chain placement is released, **When** buildings are queued, **Then** the sidebar build button bulk counter updates immediately and remains accurate until the bulk queue completes
 11. **Given** mobile chain-planning mode is active, **When** player draws a curved/freeform touch path, **Then** planning tiles follow the painted path (not only straight lines) and queued buildings preserve painted order on release
 12. **Given** mobile chain-planning mode is active, **When** player drags near map edges, **Then** auto-scroll follows the same direction as the drag path and selection-rectangle rendering remains disabled during painting
+13. **Given** mobile building placement or planning is active, **When** player double-taps, **Then** active placement/planning cancels and current touch selection intent is cleared
+14. **Given** mobile planning mode was used previously, **When** player starts a two-finger drag afterwards, **Then** camera pan still works normally (no stuck touch pointers)
 
 ---
 
@@ -221,6 +223,7 @@ As a player, I want to set unique rally points for each factory independently, s
 - **FR-050**: System MUST require ammunition for defensive turret firing and support ammunition-truck resupply (auto-targeting empty allied turrets and manual bidirectional click interactions with move-into cursor feedback).
 - **FR-051**: System MUST support a mobile chain-build gesture in building placement mode: press-and-hold a start tile to activate chain preview, drag to extend the line, and place all valid buildings in sequence on touch release while updating the build-button bulk counter for the queued amount.
 - **FR-052**: System MUST support freeform mobile bulk-building painting (non-linear strokes), suppress unit selection rectangle while painting, and keep edge auto-scroll aligned with the drag direction during planning.
+- **FR-053**: System MUST keep mobile double-tap cancellation behavior for active placement/planning and MUST preserve two-finger pan input immediately after planning sessions by cleaning up touch-pointer state on blocked planning gestures.
 
 ### Key Entities
 

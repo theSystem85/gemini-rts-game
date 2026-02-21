@@ -37,6 +37,8 @@ export class EventHandlers {
     this.gameInstance = gameInstance
     this.mobileChainBuildGesture = null
     this.mobileChainBuildSuppressClickUntil = 0
+    this.mobilePlanLastTapTime = 0
+    this.mobilePlanLastTapPos = null
 
     this.setupGameControls()
     this.setupBuildingPlacement()
@@ -250,6 +252,35 @@ export class EventHandlers {
       gameState.mobileBuildPaintTiles = []
     }
 
+    const clearSelections = () => {
+      this.units.forEach(unit => {
+        if (unit) unit.selected = false
+      })
+      this.factories.forEach(factory => {
+        if (factory) factory.selected = false
+      })
+      if (Array.isArray(gameState.buildings)) {
+        gameState.buildings.forEach(building => {
+          if (building) building.selected = false
+        })
+      }
+      gameState.selectionActive = false
+      gameState.selectionStart = { x: 0, y: 0 }
+      gameState.selectionEnd = { x: 0, y: 0 }
+    }
+
+    const cancelMobilePlanningAndPlacement = () => {
+      clearMobilePaintMode()
+      resetGestureState()
+      gameState.buildingPlacementMode = false
+      gameState.currentBuildingType = null
+      gameState.chainBuildMode = false
+      gameState.chainBuildingType = null
+      gameState.chainBuildingButton = null
+      gameState.chainBuildPrimed = false
+      clearSelections()
+    }
+
     const toWorld = (event) => {
       const gameRect = gameCanvas.getBoundingClientRect()
       return {
@@ -381,6 +412,20 @@ export class EventHandlers {
         return
       }
       if (!gameState.buildingPlacementMode || !gameState.currentBuildingType) {
+        return
+      }
+
+      const now = performance.now()
+      const isDoubleTap = this.mobilePlanLastTapPos &&
+        now - this.mobilePlanLastTapTime <= 320 &&
+        Math.hypot(event.clientX - this.mobilePlanLastTapPos.x, event.clientY - this.mobilePlanLastTapPos.y) <= 24
+
+      this.mobilePlanLastTapTime = now
+      this.mobilePlanLastTapPos = { x: event.clientX, y: event.clientY }
+
+      if (isDoubleTap) {
+        cancelMobilePlanningAndPlacement()
+        this.mobileChainBuildSuppressClickUntil = now + 250
         return
       }
 
