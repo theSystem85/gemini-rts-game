@@ -25,6 +25,7 @@ import { savePlayerBuildPatterns } from '../savePlayerBuildPatterns.js'
 import { TILE_SIZE } from '../config.js'
 import { GAME_DEFAULT_CURSOR } from '../input/cursorStyles.js'
 import { endMapEditOnPlay } from './mapEditorControls.js'
+import { getPlayableViewportHeight, getPlayableViewportWidth } from '../utils/layoutMetrics.js'
 
 export class EventHandlers {
   constructor(canvasManager, factories, units, mapGrid, moneyEl, gameInstance = null) {
@@ -34,6 +35,10 @@ export class EventHandlers {
     this.mapGrid = mapGrid
     this.moneyEl = moneyEl
     this.gameInstance = gameInstance
+    this.mobileChainBuildGesture = null
+    this.mobileChainBuildSuppressClickUntil = 0
+    this.mobilePlanLastTapTime = 0
+    this.mobilePlanLastTapPos = null
 
     this.setupGameControls()
     this.setupBuildingPlacement()
@@ -138,9 +143,14 @@ export class EventHandlers {
   setupBuildingPlacement() {
     const gameCanvas = this.canvasManager.getGameCanvas()
 
+    this.setupMobileChainBuildGesture(gameCanvas)
+
     // Add building placement handling to the canvas click event
     gameCanvas.addEventListener('click', (e) => {
       if (gameState.mapEditMode) return
+      if (performance.now() < this.mobileChainBuildSuppressClickUntil) {
+        return
+      }
       if (gameState.chainBuildMode) {
         this.handleChainBuildingPlacement(e)
       } else {
@@ -217,6 +227,312 @@ export class EventHandlers {
         this.productionController.updateBuildingButtonStates()
       }
     })
+  }
+
+  setupMobileChainBuildGesture(gameCanvas) {
+    if (!window.PointerEvent) {
+      return
+    }
+
+    const HOLD_DELAY_MS = 220
+    const EDGE_THRESHOLD = 28
+    const EDGE_SCROLL_SPEED = 12
+
+    const resetGestureState = () => {
+      if (this.mobileChainBuildGesture?.holdTimer) {
+        clearTimeout(this.mobileChainBuildGesture.holdTimer)
+      }
+      this.mobileChainBuildGesture = null
+    }
+
+    const clearMobilePaintMode = () => {
+      gameState.mobileBuildPaintMode = false
+      gameState.mobileBuildPaintType = null
+      gameState.mobileBuildPaintButton = null
+      gameState.mobileBuildPaintTiles = []
+    }
+
+    const clearSelections = () => {
+      this.units.forEach(unit => {
+        if (unit) unit.selected = false
+      })
+      this.factories.forEach(factory => {
+        if (factory) factory.selected = false
+      })
+      if (Array.isArray(gameState.buildings)) {
+        gameState.buildings.forEach(building => {
+          if (building) building.selected = false
+        })
+      }
+      gameState.selectionActive = false
+      gameState.selectionStart = { x: 0, y: 0 }
+      gameState.selectionEnd = { x: 0, y: 0 }
+    }
+
+    const cancelMobilePlanningAndPlacement = () => {
+      clearMobilePaintMode()
+      resetGestureState()
+      gameState.buildingPlacementMode = false
+      gameState.currentBuildingType = null
+      gameState.chainBuildMode = false
+      gameState.chainBuildingType = null
+      gameState.chainBuildingButton = null
+      gameState.chainBuildPrimed = false
+      clearSelections()
+    }
+
+    const toWorld = (event) => {
+      const gameRect = gameCanvas.getBoundingClientRect()
+      return {
+        worldX: event.clientX - gameRect.left + gameState.scrollOffset.x,
+        worldY: event.clientY - gameRect.top + gameState.scrollOffset.y
+      }
+    }
+
+    const addPaintTile = (tileX, tileY) => {
+      if (!gameState.mobileBuildPaintMode) {
+        return
+      }
+      const tiles = gameState.mobileBuildPaintTiles
+      const lastTile = tiles[tiles.length - 1]
+      if (lastTile && lastTile.x === tileX && lastTile.y === tileY) {
+        return
+      }
+      if (!tiles.some(tile => tile.x === tileX && tile.y === tileY)) {
+        tiles.push({ x: tileX, y: tileY })
+      }
+    }
+
+    const addPaintPath = (fromX, fromY, toX, toY) => {
+      let x = fromX
+      let y = fromY
+      const dx = Math.abs(toX - fromX)
+      const dy = Math.abs(toY - fromY)
+      const sx = fromX < toX ? 1 : -1
+      const sy = fromY < toY ? 1 : -1
+      let err = dx - dy
+
+      while (true) {
+        addPaintTile(x, y)
+        if (x === toX && y === toY) break
+        const e2 = err * 2
+        if (e2 > -dy) {
+          err -= dy
+          x += sx
+        }
+        if (e2 < dx) {
+          err += dx
+          y += sy
+        }
+      }
+    }
+
+    const applyMobilePlanningEdgeScroll = (event, rect, gesture) => {
+      const mapGrid = gameState.mapGrid
+      if (!Array.isArray(mapGrid) || mapGrid.length === 0 || !Array.isArray(mapGrid[0])) {
+        return
+      }
+      const viewportWidth = getPlayableViewportWidth(gameCanvas)
+      const viewportHeight = getPlayableViewportHeight(gameCanvas)
+      const maxScrollX = Math.max(0, mapGrid[0].length * TILE_SIZE - viewportWidth)
+      const maxScrollY = Math.max(0, mapGrid.length * TILE_SIZE - viewportHeight)
+
+      let deltaX = 0
+      let deltaY = 0
+      if (event.clientX <= rect.left + EDGE_THRESHOLD) {
+        deltaX = -EDGE_SCROLL_SPEED
+      } else if (event.clientX >= rect.right - EDGE_THRESHOLD) {
+        deltaX = EDGE_SCROLL_SPEED
+      }
+      if (event.clientY <= rect.top + EDGE_THRESHOLD) {
+        deltaY = -EDGE_SCROLL_SPEED
+      } else if (event.clientY >= rect.bottom - EDGE_THRESHOLD) {
+        deltaY = EDGE_SCROLL_SPEED
+      }
+
+      if (deltaX !== 0 || deltaY !== 0) {
+        gameState.scrollOffset.x = Math.max(0, Math.min(maxScrollX, gameState.scrollOffset.x + deltaX))
+        gameState.scrollOffset.y = Math.max(0, Math.min(maxScrollY, gameState.scrollOffset.y + deltaY))
+        gesture.lastClientX = event.clientX
+        gesture.lastClientY = event.clientY
+      }
+    }
+
+    const queueMobilePaintedBuildings = () => {
+      const buildingType = gameState.mobileBuildPaintType
+      const button = gameState.mobileBuildPaintButton
+      if (!buildingType || !button || !Array.isArray(gameState.mobileBuildPaintTiles) || gameState.mobileBuildPaintTiles.length === 0) {
+        return
+      }
+
+      const info = buildingData[buildingType]
+      if (!info) return
+
+      const occ = new Set()
+      gameState.blueprints.forEach(bp => {
+        const bi = buildingData[bp.type]
+        for (let y = 0; y < bi.height; y++) {
+          for (let x = 0; x < bi.width; x++) {
+            occ.add(`${bp.x + x},${bp.y + y}`)
+          }
+        }
+      })
+
+      gameState.mobileBuildPaintTiles.forEach(pos => {
+        let valid = true
+        for (let y = 0; y < info.height; y++) {
+          for (let x = 0; x < info.width; x++) {
+            const tx = pos.x + x
+            const ty = pos.y + y
+            if (!isTileValid(tx, ty, this.mapGrid, this.units, [], [], buildingType) || occ.has(`${tx},${ty}`)) {
+              valid = false
+              break
+            }
+          }
+          if (!valid) break
+        }
+        if (!valid) {
+          return
+        }
+
+        const bp = { type: buildingType, x: pos.x, y: pos.y }
+        gameState.blueprints.push(bp)
+        productionQueue.addItem(buildingType, button, true, bp)
+
+        for (let y = 0; y < info.height; y++) {
+          for (let x = 0; x < info.width; x++) {
+            occ.add(`${pos.x + x},${pos.y + y}`)
+          }
+        }
+      })
+    }
+
+    gameCanvas.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      if (!gameState.buildingPlacementMode || !gameState.currentBuildingType) {
+        return
+      }
+
+      const now = performance.now()
+      const isDoubleTap = this.mobilePlanLastTapPos &&
+        now - this.mobilePlanLastTapTime <= 320 &&
+        Math.hypot(event.clientX - this.mobilePlanLastTapPos.x, event.clientY - this.mobilePlanLastTapPos.y) <= 24
+
+      this.mobilePlanLastTapTime = now
+      this.mobilePlanLastTapPos = { x: event.clientX, y: event.clientY }
+
+      if (isDoubleTap) {
+        cancelMobilePlanningAndPlacement()
+        this.mobileChainBuildSuppressClickUntil = now + 250
+        return
+      }
+
+      const { worldX, worldY } = toWorld(event)
+      const tileX = Math.floor(worldX / TILE_SIZE)
+      const tileY = Math.floor(worldY / TILE_SIZE)
+
+      this.mobileChainBuildGesture = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        lastClientX: event.clientX,
+        lastClientY: event.clientY,
+        startTileX: tileX,
+        startTileY: tileY,
+        lastTileX: tileX,
+        lastTileY: tileY,
+        holdTimer: null,
+        active: false
+      }
+
+      this.mobileChainBuildGesture.holdTimer = window.setTimeout(() => {
+        if (!this.mobileChainBuildGesture || this.mobileChainBuildGesture.pointerId !== event.pointerId) {
+          return
+        }
+        const currentType = gameState.currentBuildingType
+        if (!currentType) {
+          resetGestureState()
+          return
+        }
+        const buttonRef = productionQueue.completedBuildings.find(building => building.type === currentType)?.button || null
+        if (!buttonRef) {
+          resetGestureState()
+          return
+        }
+
+        this.mobileChainBuildGesture.active = true
+        gameState.mobileBuildPaintMode = true
+        gameState.mobileBuildPaintType = currentType
+        gameState.mobileBuildPaintButton = buttonRef
+        gameState.mobileBuildPaintTiles = []
+        addPaintTile(this.mobileChainBuildGesture.startTileX, this.mobileChainBuildGesture.startTileY)
+
+        gameState.selectionActive = false
+        gameState.selectionStart = { x: 0, y: 0 }
+        gameState.selectionEnd = { x: 0, y: 0 }
+      }, HOLD_DELAY_MS)
+    }, { passive: true })
+
+    gameCanvas.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'touch' || !this.mobileChainBuildGesture || this.mobileChainBuildGesture.pointerId !== event.pointerId) {
+        return
+      }
+
+      const gesture = this.mobileChainBuildGesture
+      const moveDistance = Math.hypot(
+        event.clientX - gesture.startClientX,
+        event.clientY - gesture.startClientY
+      )
+
+      if (!gesture.active && moveDistance > 10) {
+        resetGestureState()
+        return
+      }
+
+      if (gesture.active) {
+        const gameRect = gameCanvas.getBoundingClientRect()
+        applyMobilePlanningEdgeScroll(event, gameRect, gesture)
+
+        const worldX = event.clientX - gameRect.left + gameState.scrollOffset.x
+        const worldY = event.clientY - gameRect.top + gameState.scrollOffset.y
+        const tileX = Math.floor(worldX / TILE_SIZE)
+        const tileY = Math.floor(worldY / TILE_SIZE)
+
+        addPaintPath(gesture.lastTileX, gesture.lastTileY, tileX, tileY)
+        gesture.lastTileX = tileX
+        gesture.lastTileY = tileY
+
+        gameState.selectionActive = false
+        gameState.selectionStart = { x: 0, y: 0 }
+        gameState.selectionEnd = { x: 0, y: 0 }
+      }
+    }, { passive: true })
+
+    const finalizeMobileChainGesture = (event) => {
+      if (event.pointerType !== 'touch' || !this.mobileChainBuildGesture || this.mobileChainBuildGesture.pointerId !== event.pointerId) {
+        return
+      }
+
+      const gestureWasActive = this.mobileChainBuildGesture.active
+      resetGestureState()
+
+      if (!gestureWasActive) {
+        return
+      }
+
+      this.mobileChainBuildSuppressClickUntil = performance.now() + 250
+      queueMobilePaintedBuildings()
+      clearMobilePaintMode()
+      gameState.chainBuildMode = false
+      gameState.chainBuildingType = null
+      gameState.chainBuildingButton = null
+      gameState.chainBuildPrimed = false
+    }
+
+    gameCanvas.addEventListener('pointerup', finalizeMobileChainGesture, { passive: true })
+    gameCanvas.addEventListener('pointercancel', finalizeMobileChainGesture, { passive: true })
   }
 
   setupMobileDropListeners() {
@@ -419,6 +735,7 @@ export class EventHandlers {
     }
     return positions
   }
+
 
   handleChainBuildingPlacement(e) {
     const gameCanvas = this.canvasManager.getGameCanvas()
