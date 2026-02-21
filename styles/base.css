@@ -1270,16 +1270,20 @@ body.mobile-portrait #minimap {
 body.mobile-portrait #actions {
   display: flex;
   flex-direction: row;
-  gap: 0;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
   margin: 12px 0 14px;
 }
 
 body.mobile-portrait #actions .action-button.icon-button {
-  aspect-ratio: 1 / 1;
+  width: var(--mobile-action-size);
+  height: var(--mobile-action-size);
   border-radius: 0;
-  background-color: rgba(55, 55, 55, 0.9);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  flex: 1;
+  background-color: transparent;
+  box-shadow: none;
+  border: none;
+  flex: 0 0 auto;
 }
 
 body.mobile-portrait #actions .action-button.icon-button:hover {
