@@ -77,6 +77,7 @@ As a player, I want to drag building buttons while holding shift to create lines
 15. **Given** mobile chain-planning mode is active, **When** player performs a two-finger tap-and-release without dragging, **Then** planning mode is canceled immediately
 16. **Given** mobile chain-planning mode is active, **When** player performs a two-finger drag to pan the map, **Then** planning mode does not cancel and map panning remains functional
 17. **Given** mobile chain-planning mode auto-scroll is triggered near edges, **When** drag continues, **Then** scrolling speed is intentionally reduced to roughly one-third of the prior speed for better control
+18. **Given** mobile building placement/construction mode is active (before paint mode begins), **When** player performs a two-finger tap-and-release on the map, **Then** placement mode is canceled immediately
 
 ---
 

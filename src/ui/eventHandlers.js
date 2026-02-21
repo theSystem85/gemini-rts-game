@@ -539,8 +539,12 @@ export class EventHandlers {
       this.mobileTwoFingerCancelGesture = null
     }
 
+    const isMobileConstructionInteractionActive = () => (
+      gameState.mobileBuildPaintMode || (gameState.buildingPlacementMode && Boolean(gameState.currentBuildingType))
+    )
+
     gameCanvas.addEventListener('touchstart', (event) => {
-      if (!gameState.mobileBuildPaintMode) {
+      if (!isMobileConstructionInteractionActive()) {
         resetTwoFingerCancelGesture()
         return
       }
@@ -591,7 +595,7 @@ export class EventHandlers {
         return
       }
 
-      if (!gameState.mobileBuildPaintMode) {
+      if (!isMobileConstructionInteractionActive()) {
         resetTwoFingerCancelGesture()
         return
       }
